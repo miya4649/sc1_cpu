@@ -1,0 +1,6 @@
+QUARTUS_VERSION = "15.0"
+DATE = "22:17:42  August 05, 2015"
+
+# Revisions
+
+PROJECT_REVISION = "bemicro_max10_start"
