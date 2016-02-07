@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015, miya
+  Copyright (c) 2015-2016, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@ public class Asm
   private static final int I_BC   = 0x08;
   private static final int I_BL   = 0x09;
   private static final int I_BA   = 0x0a;
-  private static final int I_IN   = 0x0b;
+  private static final int I_LOOP = 0x0b;
   private static final int I_OUT  = 0x0c;
   // normal type
   private static final int I_ADD  = 0x40;
@@ -42,6 +42,7 @@ public class Asm
   private static final int I_SL   = 0x47;
   private static final int I_SRA  = 0x48;
   private static final int I_MUL  = 0x49;
+  private static final int I_IN   = 0x4a;
 
 
   private static final String header = "module rom\n"
@@ -73,42 +74,39 @@ public class Asm
     // 0番地はNOP
     as_nop(0,0,0,0,0,0,0,0,0);
     // mem[0]からmem[15]を0から15までの値でfill
-    as_mvi(0, 0); // r0 = 0
-    as_mvi(1, 1); // r1 = 1
-    as_mvi(2, 16); // r2 = 16
-    as_mvi(3, 0); // r3 = 0
-    as_nop(0,0,0, 0,0,0, 1,1,1); // d_addr = r0; a_addr = r0; b_addr = r0
-    as_mv(1,3,1, 1,0,0, 1,0,0); // if (r1 != 0) mem[d_addr] = r3; d_addr += r1;
-    as_add(3,3,1, 0,0,0, 0,0,0); // r3 = r3 + r1
-    as_cgt(4,2,3, 0,0, 0,0); // if (r2 > r3) r4 = 0xffffffff else r4 = 0
-    as_bc(4, -3); // if (r4 != 0) pc += -3
+    as_mvi(0); // r0 = 0
+    as_add(8,0,0, 0,0,0, 0,0,0); // r8 = r0 + r0 = 0
+    as_mvi(1); // r0 = 1
+    as_add(9,0,8, 0,0,0, 0,0,0); // r9 = r0 + r8 = 1
+    as_mvi(16); // r0 = 16
+    as_add(10,0,8, 0,0,0, 0,0,0); // r10 = r0 + r8 = 16
+    as_add(11,8,8, 0,0,0, 0,0,0); // r11 = r8 + r8 = 0
+    as_nop(8,8,8, 0,0,0, 1,1,1); // d_addr = r8; a_addr = r8; b_addr = r8
+    as_add(9,11,8, 1,0,0, 1,0,0); // mem[d_addr] = r11 + r8; d_addr += r9;
+    as_add(11,11,9, 0,0,0, 0,0,0); // r11 = r11 + r9
+    as_cgt(10,11, 0,0, 0,0); // if (r10 > r11) r1 = 0xffffffff else r1 = 0
+    as_bc(-3); // if (r1 != 0) pc += -3
     as_nop(0,0,0,0,0,0,0,0,0);
     as_nop(0,0,0,0,0,0,0,0,0);
     // x = 16; y = 0; z = 8;
     // for (i = 0; i < 8; i++) {mem[x] = mem[y] + mem[z]; x+=1;y+=1;z+=1;}
-    as_mvi(3, 8); // r3 = 8
+    as_mvi(8); // r0 = 8
+    as_add(11,0,8, 0,0,0, 0,0,0); // r11 = r0 + r8 = 8
+    as_sub(3,0,9, 0,0,0, 0,0,0); // r3 = r0 - r9 = 7
+    as_mvi(3); // r0 = 3
+    as_add(4,0,8, 0,0,0, 0,0,0); // r4 = r0 + r8 = 3
+    as_add(5,8,8, 0,0,0, 0,0,0); // r5 = r8 + r8 = 0
+    as_loop(); // 3ステップ後の命令を7+1回繰り返す
+    as_nop(10,8,11, 0,0,0, 1,1,1); // d_addr = r10; a_addr = r8; b_addr = r11
     as_nop(0,0,0,0,0,0,0,0,0);
-    as_nop(2,0,3, 0,0,0, 1,1,1); // d_addr = r2; a_addr = r0; b_addr = r3
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
-    as_add(1,1,1, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r1; a+=r1; b+=r1;
+    as_add(9,9,9, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r9; a+=r9; b+=r9;
     // x = 16;
-    // for (i = 0; i < 8; i++) {r0 = r0 + mem[x]; x+=1;}
-    as_nop(0,0,2, 0,0,0, 1,1,1); // d_addr = r0; a_addr = r0; b_addr = r2
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_add(0,0,1, 0,0,1, 0,0,1); // r0 = r0 + mem[b]; b += r1;
-    as_out(0, 0, 0); // out(r0) result = 120
+    // for (i = 0; i < 8; i++) {r11 = r11 + mem[x]; x+=1;}
+    as_loop(); // 3ステップ後の命令を7+1回繰り返す
+    as_nop(8,8,10, 0,0,0, 1,1,1); // d_addr = r8; a_addr = r8; b_addr = r10
+    as_add(11,8,8, 0,0,0, 0,0,0); // r11 = r8 + r8 = 0
+    as_add(11,11,9, 0,0,1, 0,0,1); // r11 = r11 + mem[b]; b += r9;
+    as_out(11, 0, 0); // out(r11) result = 120
     as_halt();
     as_nop(0,0,0,0,0,0,0,0,0);
     as_nop(0,0,0,0,0,0,0,0,0);
@@ -117,11 +115,17 @@ public class Asm
     /*
     // 例2: カウントアップしてその値をI/Oポートに出力
     as_nop(0,0,0,0,0,0,0,0,0);
-    as_mvi(0, 0);
-    as_mvi(1, 1);
-    as_add(0,0,1, 0,0,0, 0,0,0);
-    as_out(0, 0, 0);
-    as_bc(1, -2);
+    as_mvi(0); // r0 = 0
+    as_add(8,0,0, 0,0,0, 0,0,0); // r8 = r0 + r0 = 0
+    as_mvi(19); // r0 = 19 （実機では19、シミュレーション時は0にする）
+    as_add(9,0,8, 0,0,0, 0,0,0); // r9 = r0 + r8 = 19
+    as_mvi(1); // r0 = 1
+    as_add(1,0,8, 0,0,0, 0,0,0); // r1 = r0 + r8 = 1
+    // loop
+    as_add(8,8,1, 0,0,0, 0,0,0); // r8 = r8 + r1 = 0
+    as_sr(10,8,9, 0,0,0, 0,0,0); // r10 = r8 >> r9
+    as_out(10, 0, 0);
+    as_bc(-3); // if (r1 != 0) PC += -3
     as_nop(0,0,0,0,0,0,0,0,0);
     as_nop(0,0,0,0,0,0,0,0,0);
     */
@@ -151,54 +155,59 @@ public class Asm
     print_binary((reg_d << 26) | (reg_a << 20) | (reg_b << 14) | (add_d << 12) | (add_a << 11) | (add_b << 10) | (is_mem_d << 9) | (is_mem_a << 8) | (is_mem_b << 7) | I_NOP);
   }
 
-  private void as_mv(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
+  private void as_mv(int reg_d, int reg_a, int add_d, int add_a, int is_mem_d, int is_mem_a)
   {
-    print_binary((reg_d << 26) | (reg_a << 20) | (reg_b << 14) | (add_d << 12) | (add_a << 11) | (add_b << 10) | (is_mem_d << 9) | (is_mem_a << 8) | (is_mem_b << 7) | I_MV);
+    print_binary((reg_d << 26) | (reg_a << 20) | (add_d << 12) | (add_a << 11) | (is_mem_d << 9) | (is_mem_a << 8) | I_MV);
   }
 
-  private void as_mvi(int reg_d, int value)
+  private void as_mvi(int value)
   {
-    print_binary((reg_d << 26) | ((value & 0xffff) << 10) | I_MVI);
+    print_binary(((value & 0xffff) << 10) | I_MVI);
   }
 
-  private void as_mvih(int reg_d, int value)
+  private void as_mvih(int value)
   {
-    print_binary((reg_d << 26) | ((value & 0xffff) << 10) | I_MVIH);
+    print_binary(((value & 0xffff) << 10) | I_MVIH);
   }
 
-  private void as_ceq(int reg_d, int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
+  private void as_ceq(int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
   {
-    print_binary((reg_d << 26) | (reg_a << 20) | (reg_b << 14) | (add_a << 11) | (add_b << 10) | (is_mem_a << 8) | (is_mem_b << 7) | I_CEQ);
+    print_binary((reg_a << 20) | (reg_b << 14) | (add_a << 11) | (add_b << 10) | (is_mem_a << 8) | (is_mem_b << 7) | I_CEQ);
   }
 
-  private void as_cgt(int reg_d, int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
+  private void as_cgt(int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
   {
-    print_binary((reg_d << 26) | (reg_a << 20) | (reg_b << 14) | (add_a << 11) | (add_b << 10) | (is_mem_a << 8) | (is_mem_b << 7) | I_CGT);
+    print_binary((reg_a << 20) | (reg_b << 14) | (add_a << 11) | (add_b << 10) | (is_mem_a << 8) | (is_mem_b << 7) | I_CGT);
   }
 
-  private void as_cgta(int reg_d, int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
+  private void as_cgta(int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
   {
-    print_binary((reg_d << 26) | (reg_a << 20) | (reg_b << 14) | (add_a << 11) | (add_b << 10) | (is_mem_a << 8) | (is_mem_b << 7) | I_CGTA);
+    print_binary((reg_a << 20) | (reg_b << 14) | (add_a << 11) | (add_b << 10) | (is_mem_a << 8) | (is_mem_b << 7) | I_CGTA);
   }
 
-  private void as_bc(int reg_d, int offset)
+  private void as_bc(int offset)
   {
-    print_binary((reg_d << 26) | ((offset & 0xffff) << 10) | I_BC);
+    print_binary(((offset & 0xffff) << 10) | I_BC);
   }
 
-  private void as_bl(int reg_d, int offset)
+  private void as_bl(int offset)
   {
-    print_binary((reg_d << 26) | ((offset & 0xffff) << 10) | I_BL);
+    print_binary(((offset & 0xffff) << 10) | I_BL);
   }
 
-  private void as_ba(int reg_a)
+  private void as_ba()
   {
-    print_binary((reg_a << 20) | I_BA);
+    print_binary(I_BA);
   }
 
-  private void as_in(int reg_d)
+  private void as_loop()
   {
-    print_binary((reg_d << 26) | I_IN);
+    print_binary(I_LOOP);
+  }
+
+  private void as_in(int reg_d, int add_d, int is_mem_d)
+  {
+    print_binary((reg_d << 26) | (add_d << 12) | (is_mem_d << 9) | I_IN);
   }
 
   private void as_out(int reg_a, int add_a, int is_mem_a)
@@ -255,5 +264,4 @@ public class Asm
   {
     print_binary((reg_d << 26) | (reg_a << 20) | (reg_b << 14) | (add_d << 12) | (add_a << 11) | (add_b << 10) | (is_mem_d << 9) | (is_mem_a << 8) | (is_mem_b << 7) | I_MUL);
   }
-
 }

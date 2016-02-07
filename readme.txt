@@ -42,10 +42,10 @@ add,sub,and,or,xor,not,sr,sl,sra,mul,halt,nop,mv,ceq,cgt,cgta,ba,in,out
 reg_d:6 reg_a:6 reg_b:6 none:1 inc_flag:3 mem_flag:3 op:7
 
 mvi,mvih
-reg_d:6 im:16 none:3 op:7
+none:6 im:16 none:3 op:7
 
 bc,bl
-reg_d:6 ims:16 none:3 op:7
+none:6 ims:16 none:3 op:7
 
 op: オペコード
 
@@ -82,13 +82,13 @@ b_addr: オペランドBのメモリのアドレス
 汎用レジスタ:
 
 R0 〜 R15
-
+（R0 〜 R5は特定命令で使用される）
 
 * 命令配置制約
 
 ** 分岐命令(BC,BL,BA)、HALTの後の2命令は遅延スロットとなる。分岐命令の後2ステップの命令はそのまま実行され、3サイクル後に分岐先の命令が実行される。条件分岐の有無に関わらず遅延スロットの命令は実行される。混乱を避けるため通常は遅延スロットにはNOPを置く場合が多い。
 例：
-bc(1, -2); // if (R1 != 0) PC += -2
+bc(-2); // if (R1 != 0) PC += -2
 nop(0,0,0,0,0,0,0,0,0);
 nop(0,0,0,0,0,0,0,0,0); // この命令まで実行されてから分岐先に飛ぶ
 
@@ -96,9 +96,9 @@ nop(0,0,0,0,0,0,0,0,0); // この命令まで実行されてから分岐先に�
 
 ** mem_flag=1の命令で参照されるレジスタを操作する命令は、その命令の2サイクル以上前に置かなければいけない。
 例：
-mvi(3, 16); // 汎用レジスタR3に値16を代入
+mvi(16); // MVIレジスタR0に値16を代入
 nop(0,0,0,0,0,0,0,0,0); // 1サイクル待つ
-nop(3,3,3, 0,0,0, 1,1,1); // d_addr, a_addr, b_addrにR3の値を代入
+nop(0,0,0, 0,0,0, 1,1,1); // d_addr, a_addr, b_addrにR0の値を代入
 
 ** 書き込み先がメモリの場合、書き換え後の値が読み込み可能となるのは3サイクル後である。ゆえにデータ依存性のある操作を連続して行う場合、2サイクル以上他の命令を挟まなければならない。
 例：
@@ -107,6 +107,30 @@ add(3,3,4, 1,1,0, 1,1,0); // mem[8] = mem[8] + 1;
 nop(0,0,0,0,0,0,0,0,0); // 2サイクル待つ
 nop(0,0,0,0,0,0,0,0,0); // ここにはNOP以外に無関係な他の命令を入れても良い
 add(3,3,4, 1,1,0, 1,1,0); // mem[8] = mem[8] + 1;
+
+** 無条件のMV命令はないのでADDで0を加算する操作等で代用する。
+例：
+mvi(0); // r0 = 0
+add(8,0,0, 0,0,0, 0,0,0); // r8 = r0 + r0 = 0
+mvi(1); // r0 = 1
+add(9,0,8, 0,0,0, 0,0,0); // r9 = r0 + r8 = 1
+
+** LOOP命令のループ終了位置オフセットはLOOP命令の3サイクル後以降に設定しなければいけない。
+例：
+mvi(0); // r0 = 0
+add(8,0,0, 0,0,0, 0,0,0); // r8 = r0 + r0 = 0
+mvi(7); // r0 = 7
+add(3,0,8, 0,0,0, 0,0,0); // r3 = r0 + r8 = 7 : ループ回数 = 7 + 1
+mvi(3); // r0 = 3
+add(4,0,8, 0,0,0, 0,0,0); // r4 = r0 + r8 = 3 : ループ終了位置はLOOP命令の3サイクル後
+add(5,8,8, 0,0,0, 0,0,0); // r5 = r8 + r8 = 0 : ループ終了位置からのジャンプ先オフセットは0 （同じ命令を繰り返す）
+loop(); // ループ実行（予約）
+nop(0,0,0,0,0,0,0,0,0); // ウェイト（他の無関係な命令を置いても良い）
+nop(0,0,0,0,0,0,0,0,0);
+add(9,9,9, 1,1,1, 1,1,1); // mem[d]=mem[a]+mem[b]; d+=r9; a+=r9; b+=r9; // この命令が8回繰り返される
+
+** LOOP命令はネスト不可だが通常の条件分岐を使ったループの中にLOOP命令のループを置いたり、LOOP命令のループの中に通常の条件分岐を使ったループを置くことは可能。
+
 
 
 各命令の解説:
@@ -221,92 +245,105 @@ NOP
 
 MV
 
-解説: Move。もし(B != 0)ならばDにAを代入
+解説: Move。もし(R1 != 0)ならばDにAを代入
 
-アセンブリ: mv(reg_d, reg_a, reg_b, inc_d, inc_a, inc_b, mem_d, mem_a, mem_b)
+アセンブリ: mv(reg_d, reg_a, inc_d, inc_a, mem_d, mem_a)
 
-機能: if (B != 0) {D = A;}
+機能: if (R1 != 0) {D = A;}
 
 
 MVI
 
-解説: Move Immediate。16bit即値をレジスタDに代入。上位16bitは0
+解説: Move Immediate。16bit即値をR0に代入。上位16bitは0
 
-アセンブリ: mvi(reg_d, im)
+アセンブリ: mvi(im)
 
-機能: D(reg) = im
+機能: R0 = im
 
 
 MVIH
 
-解説: Move Immediate High。16bit即値をレジスタDの上位16bitに代入。
+解説: Move Immediate High。16bit即値をR0の上位16bitに代入。
 
-アセンブリ: mvih(reg_d, im)
+アセンブリ: mvih(im)
 
-機能: D(reg) = D(reg) | (im << 16)
+機能: R0 = (R0 & 0xffff) | (im << 16)
 
 
 CEQ
 
-解説: Compare Equal。もし(A == B)ならばD(reg) = 0xffffffff、それ以外ならD(reg) = 0
+解説: Compare Equal。もし(A == B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
 
-アセンブリ: ceq(reg_d, reg_a, reg_b, inc_a, inc_b, mem_a, mem_b)
+アセンブリ: ceq(reg_a, reg_b, inc_a, inc_b, mem_a, mem_b)
 
-機能: if (A == B) {D(reg) = 0xffffffff;} else {D(reg) = 0;}
+機能: if (A == B) {R1 = 0xffffffff;} else {R1 = 0;}
 
 
 CGT
 
-解説: Compare Greater Than。もし(A > B)ならばD(reg) = 0xffffffff、それ以外ならD(reg) = 0
+解説: Compare Greater Than。もし(A > B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
 
-アセンブリ: cgt(reg_d, reg_a, reg_b, inc_a, inc_b, mem_a, mem_b)
+アセンブリ: cgt(reg_a, reg_b, inc_a, inc_b, mem_a, mem_b)
 
-機能: if (A > B) {D(reg) = 0xffffffff;} else {D(reg) = 0;}
+機能: if (A > B) {R1 = 0xffffffff;} else {R1 = 0;}
 
 
 CGTA
 
-解説: Compare Greater Than Arithmetic。A、Bをsignedとして扱い、もし(A > B)ならばD(reg) = 0xffffffff、それ以外ならD(reg) = 0
+解説: Compare Greater Than Arithmetic。A、Bをsignedとして扱い、もし(A > B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
 
-アセンブリ: cgta(reg_d, reg_a, reg_b, inc_a, inc_b, mem_a, mem_b)
+アセンブリ: cgta(reg_a, reg_b, inc_a, inc_b, mem_a, mem_b)
 
-機能: if (A(signed) > B(signed)) {D(reg) = 0xffffffff;} else {D(reg) = 0;}
+機能: if (A(signed) > B(signed)) {R1 = 0xffffffff;} else {R1 = 0;}
 
 
 BC
 
-解説: Branch Conditional。もし(レジスタD != 0)なら現在のPCに即値を加算した命令アドレスに分岐する。それ以外なら次の命令に進む。
+解説: Branch Conditional。もし(R1 != 0)なら現在のPCに即値を加算した命令アドレスに分岐する。それ以外なら次の命令に進む。
 
-アセンブリ: bc(reg_d, ims)
+アセンブリ: bc(ims)
 
-機能: if (D(reg) != 0) {PC += ims;}
+機能: if (R1 != 0) {PC += ims;}
 
 
 BL
 
-解説: Branch and Link。現在のPCをレジスタDにコピーし、現在のPCに即値を加算した命令アドレスに分岐する。
+解説: Branch and Link。現在のPCをR2にコピーし、現在のPCに即値を加算した命令アドレスに分岐する。
 
-アセンブリ: bl(reg_d, ims)
+アセンブリ: bl(ims)
 
-機能: {D(reg) = PC; PC += ims;}
+機能: {R2 = PC; PC += ims;}
 
 
 BA
 
-解説: Branch Absolute。レジスタAの値の命令アドレスにジャンプする。
+解説: Branch Absolute。R0の値の命令アドレスにジャンプする。
 
-アセンブリ: ba(reg_a)
+アセンブリ: ba()
 
-機能: D = A  B
+機能: PC = R0
+
+
+LOOP
+
+解説: ループ命令。指定範囲の命令を指定回数繰り返し実行する。
+ループ回数：(R3 + 1)
+ループ終了位置オフセット：R4 (この命令のPC + R4の命令を実行後にジャンプする)
+ジャンプ先オフセット：R5（ループ終了位置のPC + R5にジャンプ）
+R4 >= 3, R5 <= 0 でなければならない。
+
+アセンブリ: loop()
+
+機能: R3, R4, R5を内部レジスタにコピーし、ループ実行を予約する。
 
 
 IN
 
-解説: 入力ポートの値をレジスタDにコピーする
+解説: 入力ポートの値をDにコピーする
 
-アセンブリ: in(reg_d)
+アセンブリ: in(reg_d, inc_d, mem_d)
 
-機能: D(reg) = Port_IN
+機能: D = Port_IN
 
 
 OUT

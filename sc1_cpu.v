@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015, miya
+  Copyright (c) 2015-2016, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,14 @@ module sc1_cpu
   parameter DEPTH_D = 8;
   parameter DEPTH_REG = 4;
 
+  parameter SP_REG_MVI = 4'd0;
+  parameter SP_REG_BA = 4'd0;
+  parameter SP_REG_CP = 4'd1;
+  parameter SP_REG_LINK = 4'd2;
+  parameter SP_REG_LOOP_COUNTER = 4'd3;
+  parameter SP_REG_LOOP_END = 4'd4;
+  parameter SP_REG_LOOP_SPAN = 4'd5;
+
   // opcode
   // special type
   parameter I_HALT = 7'h00;
@@ -44,7 +52,7 @@ module sc1_cpu
   parameter I_BC   = 7'h08;
   parameter I_BL   = 7'h09;
   parameter I_BA   = 7'h0a;
-  parameter I_IN   = 7'h0b;
+  parameter I_LOOP = 7'h0b;
   parameter I_OUT  = 7'h0c;
   // normal type
   parameter I_ADD  = 7'h40;
@@ -57,6 +65,7 @@ module sc1_cpu
   parameter I_SL   = 7'h47;
   parameter I_SRA  = 7'h48;
   parameter I_MUL  = 7'h49;
+  parameter I_IN   = 7'h4a;
 
   parameter TRUE = 1'b1;
   parameter FALSE = 1'b0;
@@ -72,6 +81,7 @@ module sc1_cpu
 
   wire [WIDTH_D-1:0] mem_d_o_a;
   wire [WIDTH_D-1:0] mem_d_o_b;
+  wire               mem_d_we_sig;
   reg [WIDTH_D-1:0]  mem_d_i;
   reg [DEPTH_D-1:0]  mem_d_addr_w;
   reg [DEPTH_D-1:0]  mem_d_addr_w_d1;
@@ -84,6 +94,9 @@ module sc1_cpu
   reg [DEPTH_I-1:0]  pc_d1;
   reg [DEPTH_I-1:0]  pc_d2;
   reg [10:0]         stage_init;
+  reg [WIDTH_D-1:0]  loop_counter;
+  reg [DEPTH_I-1:0]  loop_end;
+  reg [DEPTH_I-1:0]  loop_span;
 
   wire               is_mem_d_s1;
   wire               is_mem_a_s1;
@@ -91,27 +104,28 @@ module sc1_cpu
   wire               add_d_s1;
   wire               add_a_s1;
   wire               add_b_s1;
-  wire [5:0]         reg_d_addr_s1;
-  wire [5:0]         reg_a_addr_s1;
-  wire [5:0]         reg_b_addr_s1;
+  wire [DEPTH_REG-1:0] reg_d_addr_s1;
+  wire [DEPTH_REG-1:0] reg_a_addr_s1;
+  wire [DEPTH_REG-1:0] reg_b_addr_s1;
 
-  reg [WIDTH_I-1:0]  mem_i_o_d1;
-  wire [6:0]         op;
-  wire               is_type_normal;
-  wire               is_mem_d;
-  wire               is_mem_a;
-  wire               is_mem_b;
-  wire [5:0]         reg_d_addr;
-  wire [5:0]         reg_a_addr;
-  wire [5:0]         reg_b_addr;
-  wire [15:0]        im16;
-  wire signed [15:0] ims16;
+  reg [WIDTH_I-1:0]    mem_i_o_d1;
+  wire [6:0]           op;
+  wire                 is_type_normal;
+  wire                 not_increment;
+  wire                 is_mem_d;
+  wire                 is_mem_a;
+  wire                 is_mem_b;
+  wire [DEPTH_REG-1:0] reg_d_addr;
+  wire [DEPTH_REG-1:0] reg_a_addr;
+  wire [DEPTH_REG-1:0] reg_b_addr;
+  wire [15:0]          im16;
+  wire signed [15:0]   ims16;
 
-  wire [WIDTH_D-1:0] source_a;
-  wire [WIDTH_D-1:0] source_b;
+  wire [WIDTH_D-1:0]   source_a;
+  wire [WIDTH_D-1:0]   source_b;
 
   // register file
-  reg [WIDTH_REG-1:0] reg_file[(1 << DEPTH_REG)-1:0];
+  reg [WIDTH_REG-1:0]  reg_file[(1 << DEPTH_REG)-1:0];
 
   // decode(stage1)
   assign is_mem_d_s1 = mem_i_o[9];
@@ -120,9 +134,9 @@ module sc1_cpu
   assign add_d_s1 = mem_i_o[12];
   assign add_a_s1 = mem_i_o[11];
   assign add_b_s1 = mem_i_o[10];
-  assign reg_d_addr_s1 = mem_i_o[31:26];
-  assign reg_a_addr_s1 = mem_i_o[25:20];
-  assign reg_b_addr_s1 = mem_i_o[19:14];
+  assign reg_d_addr_s1 = mem_i_o[DEPTH_REG+26-1:26];
+  assign reg_a_addr_s1 = mem_i_o[DEPTH_REG+20-1:20];
+  assign reg_b_addr_s1 = mem_i_o[DEPTH_REG+14-1:14];
 
   // decode(stage2)
   assign op = mem_i_o_d1[6:0];
@@ -130,11 +144,14 @@ module sc1_cpu
   assign is_mem_d = mem_i_o_d1[9];
   assign is_mem_a = mem_i_o_d1[8];
   assign is_mem_b = mem_i_o_d1[7];
-  assign reg_d_addr = mem_i_o_d1[31:26];
-  assign reg_a_addr = mem_i_o_d1[25:20];
-  assign reg_b_addr = mem_i_o_d1[19:14];
+  assign reg_d_addr = mem_i_o_d1[DEPTH_REG+26-1:26];
+  assign reg_a_addr = mem_i_o_d1[DEPTH_REG+20-1:20];
+  assign reg_b_addr = mem_i_o_d1[DEPTH_REG+14-1:14];
   assign im16 = mem_i_o_d1[25:10];
   assign ims16 = mem_i_o_d1[25:10];
+
+  // manual pc increment
+  assign not_increment = ((op == I_HALT) || (op == I_BC) || (op == I_BL) || (op == I_BA)) ? 1'b1 : 1'b0;
 
   // switch source
   assign source_a = is_mem_a ? mem_d_o_a : reg_file[reg_a_addr];
@@ -157,11 +174,14 @@ module sc1_cpu
         I_SL:    result = source_a << source_b;
         I_SRA:   result = $signed(source_a) >>> source_b;
         I_MUL:   result = $signed(source_a) * $signed(source_b);
+        I_IN:    result = port_in;
         default: result = result;
       endcase
     end
   endfunction
 
+  // mem_d_we condition
+  assign mem_d_we_sig = is_mem_d & (is_type_normal | (op == I_MV));
 
   always @(posedge clk)
     begin
@@ -173,6 +193,9 @@ module sc1_cpu
           mem_i_addr_w <= ZERO;
           mem_i_we <= FALSE;
           port_out <= ZERO;
+          loop_counter <= ZERO;
+          loop_end <= ZERO;
+          loop_span <= ZERO;
         end
       else if (cpu_en == FALSE)
         // init
@@ -249,10 +272,40 @@ module sc1_cpu
           mem_i_o_d1 <= mem_i_o;
           pc_d2 <= pc_d1;
           pc_d1 <= mem_i_addr_r;
-          mem_d_we <= is_mem_d;
+          mem_d_we <= mem_d_we_sig;
           mem_d_addr_w_d1 <= mem_d_addr_w;
           mem_d_addr_w_d2 <= mem_d_addr_w_d1;
 
+          // loop counter
+          if (loop_end == mem_i_addr_r)
+            begin
+              if ((loop_counter != ZERO) && (op != I_LOOP))
+                begin
+                  loop_counter <= loop_counter - ONE;
+                end
+            end
+
+          // increment pc (prefetch address)
+          if (!not_increment)
+            begin
+              if (loop_end == mem_i_addr_r)
+                begin
+                  if (loop_counter == ZERO)
+                    begin
+                      mem_i_addr_r <= mem_i_addr_r + ONE;
+                    end
+                  else
+                    begin
+                      mem_i_addr_r <= mem_i_addr_r + loop_span;
+                    end
+                end
+              else
+                begin
+                  mem_i_addr_r <= mem_i_addr_r + ONE;
+                end
+            end
+
+          // execution
           if (is_type_normal)
             begin
               // for normal instructions
@@ -264,9 +317,6 @@ module sc1_cpu
                 begin
                   reg_file[reg_d_addr] <= result(op);
                 end
-
-              // increment pc (prefetch address)
-              mem_i_addr_r <= mem_i_addr_r + ONE;
             end
           else
             begin
@@ -278,11 +328,10 @@ module sc1_cpu
                   end
                 I_NOP:
                   begin
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
                   end
                 I_MV:
                   begin
-                    if (source_b != ZERO)
+                    if (reg_file[SP_REG_CP] != ZERO)
                       begin
                         if (is_mem_d)
                           begin
@@ -293,57 +342,51 @@ module sc1_cpu
                             reg_file[reg_d_addr] <= source_a;
                           end
                       end
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
                   end
                 I_MVI:
                   begin
-                    reg_file[reg_d_addr] <= im16;
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
+                    reg_file[SP_REG_MVI] <= im16;
                   end
                 I_MVIH:
                   begin
-                    reg_file[reg_d_addr] <= {im16, reg_file[reg_d_addr][15:0]};
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
+                    reg_file[SP_REG_MVI] <= {im16, reg_file[SP_REG_MVI][15:0]};
                   end
                 I_CEQ:
                   begin
                     if (source_a == source_b)
                       begin
-                        reg_file[reg_d_addr] <= FFFF;
+                        reg_file[SP_REG_CP] <= FFFF;
                       end
                     else
                       begin
-                        reg_file[reg_d_addr] <= ZERO;
+                        reg_file[SP_REG_CP] <= ZERO;
                       end
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
                   end
                 I_CGT:
                   begin
                     if (source_a > source_b)
                       begin
-                        reg_file[reg_d_addr] <= FFFF;
+                        reg_file[SP_REG_CP] <= FFFF;
                       end
                     else
                       begin
-                        reg_file[reg_d_addr] <= ZERO;
+                        reg_file[SP_REG_CP] <= ZERO;
                       end
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
                   end
                 I_CGTA:
                   begin
                     if ($signed(source_a) > $signed(source_b))
                       begin
-                        reg_file[reg_d_addr] <= FFFF;
+                        reg_file[SP_REG_CP] <= FFFF;
                       end
                     else
                       begin
-                        reg_file[reg_d_addr] <= ZERO;
+                        reg_file[SP_REG_CP] <= ZERO;
                       end
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
                   end
                 I_BC:
                   begin
-                    if (reg_file[reg_d_addr] == ZERO)
+                    if (reg_file[SP_REG_CP] == ZERO)
                       begin
                         mem_i_addr_r <= mem_i_addr_r + ONE;
                       end
@@ -354,29 +397,22 @@ module sc1_cpu
                   end
                 I_BL:
                   begin
-                    reg_file[reg_d_addr] <= pc_d2 + ONE;
+                    reg_file[SP_REG_LINK] <= pc_d2 + ONE;
                     mem_i_addr_r <= pc_d2 + ims16;
                   end
                 I_BA:
                   begin
-                    mem_i_addr_r <= reg_file[reg_a_addr];
+                    mem_i_addr_r <= reg_file[SP_REG_BA];
                   end
-                I_IN:
+                I_LOOP:
                   begin
-                    if (is_mem_d)
-                      begin
-                        mem_d_i <= port_in;
-                      end
-                    else
-                      begin
-                        reg_file[reg_d_addr] <= port_in;
-                      end
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
+                    loop_counter <= reg_file[SP_REG_LOOP_COUNTER];
+                    loop_end <= pc_d2 + reg_file[SP_REG_LOOP_END][DEPTH_I-1:0];
+                    loop_span <= reg_file[SP_REG_LOOP_SPAN][DEPTH_I-1:0];
                   end
                 I_OUT:
                   begin
                     port_out <= source_a;
-                    mem_i_addr_r <= mem_i_addr_r + ONE;
                   end
                 default: ;
               endcase

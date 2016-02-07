@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015, miya
+  Copyright (c) 2015-2016, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -28,7 +28,7 @@ module testbench;
     begin
       $dumpfile("wave.vcd");
       $dumpvars(5, testbench);
-      for (i = 0; i < 8; i = i + 1)
+      for (i = 0; i < 16; i = i + 1)
         begin
           $dumpvars(0, testbench.sc1_cpu_0.reg_file[i]);
           $dumpvars(0, testbench.sc1_cpu_0.mem_d_a.ram[i]);
