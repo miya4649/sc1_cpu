@@ -13,11 +13,10 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-module bemicro_max10_start
+module top
   (
-   input        SYS_CLK,
-   output [7:0] USER_LED,
-   input [3:0]  PB
+   input        CLK,
+   output [7:0] LED
    );
 
   localparam WIDTH_D = 32;
@@ -25,35 +24,31 @@ module bemicro_max10_start
   localparam DEPTH_I = 8;
   localparam DEPTH_D = 8;
 
-  wire          clk_pll;
+  localparam RESET_TIMER_BIT = 22;
 
-  // generate reset signal (push button 1)
-  wire          reset;
-  reg           reset_reg1;
-  reg           reset_reg2;
-  assign reset = reset_reg2;
-
-  always @(posedge clk_pll)
+  wire [DEPTH_I-1:0] rom_addr;
+  wire [31:0]        rom_data;
+  wire [WIDTH_REG-1:0] port_out;
+  assign LED = port_out[7:0];
+  
+  reg                  reset = 1'b0;
+  reg [31:0]           reset_counter = 32'd0;
+  always @(posedge CLK)
     begin
-      reset_reg1 <= ~PB[0];
-      reset_reg2 <= reset_reg1;
+      if (reset_counter[RESET_TIMER_BIT] == 1'b1)
+        begin
+          reset <= 1'b0;
+        end
+      else
+        begin
+          reset <= 1'b1;
+          reset_counter <= reset_counter + 1'd1;
+        end
     end
-
-  wire [WIDTH_REG-1:0] out_data;
-  assign USER_LED = ~(out_data[7:0]);
-
-  wire [DEPTH_I-1:0]   rom_addr;
-  wire [31:0]          rom_data;
-
-  simple_pll simple_pll_0
-    (
-     .inclk0 (SYS_CLK),
-     .c0 (clk_pll)
-     );
 
   rom rom_0
     (
-     .clk (clk_pll),
+     .clk (CLK),
      .addr (rom_addr),
      .data_out (rom_data)
      );
@@ -67,12 +62,12 @@ module bemicro_max10_start
       )
   sc1_cpu_0
     (
-     .clk (clk_pll),
+     .clk (CLK),
      .reset (reset),
      .rom_addr (rom_addr),
      .rom_data (rom_data),
      .port_in ({WIDTH_REG{1'b0}}),
-     .port_out (out_data)
+     .port_out (port_out)
      );
 
 endmodule

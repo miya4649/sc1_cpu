@@ -6,29 +6,54 @@ http://cellspe.matrix.jp/zerofpga/sc1_cpu.html
 
 * ターゲットボードについて
 
-このプロジェクトはFPGA開発ボード「BeMicro Max 10」に対応しています。
+このプロジェクトは以下のFPGA開発ボードに対応しています。
+BeMicro Max 10
+BeMicro CV A9
+Terasic DE0-CV
+MAX10-FB基板（CQ出版社「FPGA電子工作スーパーキット」付録基板）
+Lattice iCE40HX-8K Breakout Board (開発環境: IceStorm)
 
-
-* BeMicro Max 10のI/O電圧のジャンパ設定について
+* （BeMicro Max 10の場合）I/O電圧のジャンパ設定について
 
 BeMicro Max 10ではボードのI/O電圧を3.3Vに設定することを前提にしています。
 BeMicro Max 10 Getting Started User Guideのp.5を参照してVCCIO選択ジャンパ (J1,J9)が3.3V側に設定されていることを確認してください。
 https://www.arrow.com/en/products/bemicromax10/arrow-development-tools/
 
+* （BeMicro CV A9の場合）I/O電圧のジャンパ設定について
+
+このプロジェクトはボードのI/O電圧を3.3Vに設定することを前提にしています。
+BeMicro CV A9 Hardware Reference Guide
+http://www.alterawiki.com/wiki/BeMicro_CV_A9#Documentation
+のp.23を参照してVCCIO選択ジャンパ (J11)のpin 1とpin 2が接続されていることを確認してください。
+
+* （MAX10-FB基板の場合）I/O電圧のジャンパ設定について
+
+MAX10-FB基板ではボードのI/O電圧を3.3Vに設定することを前提にしています。
+書籍の標準設定では3.3Vになっています。
+
+* iCE40HX-8K用のプロジェクトについて
+iCE40HX-8K(開発環境: IceStorm)版は通常版とは仕様が異なる特別バージョンです。詳しくは
+sc1_cpu/sc1_cpu/ice40hx8k/readme.txt
+を参照してください。
 
 * ビルド・実行方法
 
-Quartus II Ver.15.0以上 でプロジェクトファイル sc1_cpu/bemicro_max10/bemicro_max10_start.qpfを開いて「Start Compilation」、「Programmer」で転送して実行します。
+Quartus II Ver.15.0以上 でプロジェクトファイルを開いて「Start Compilation」、「Programmer」で転送して実行します。
+プロジェクトファイル:
+BeMicro Max 10: sc1_cpu/bemicro_max10/bemicro_max10_start.qpf
+BeMicro CV A9:  sc1_cpu/bemicro_cva9/bemicro_cva9_start.qpf
+Terasic DE0-CV: sc1_cpu/de0-cv/de0-cv_start.qpf
+MAX10-FB基板: sc1_cpu/max10fb/max10fb_start.qpf
 
-テスト用に連続データの演算テストのプログラムが入っています。実行するとLEDに結果が表示されます。0b1111000 (120) が表示されれば正常に計算できています。
-
+テスト用にカウンターのプログラムが入っています。実行するとLEDが光ります。
 
 * このCPUでプログラミングする方法
 
 sc1_cpu/asm 以下に簡易アセンブラが入っています。
-Asm.java の do_asm() 内にアセンブリを記述し、 sc1_cpu/asm に cd して ./run.sh を実行すると一つ上のディレクトリにバイナリ（rom.v）が出力されます。
+Program.java にアセンブリを記述し、 sc1_cpu/asm に cd して ./run.sh を実行すると一つ上のディレクトリにバイナリ（rom.v）が出力されます。
+（Windowsではrun.batを実行）
 これがCPUの起動時に読み込まれて実行されます。
-実行にはOpenJDK 8.0以上のインストールが必要です。
+実行にはJDK 8.0以上のインストールが必要です。
 
 
 * 命令セット・アーキテクチャ
@@ -308,11 +333,11 @@ BC
 
 BL
 
-解説: Branch and Link。現在のPCをR2にコピーし、現在のPCに即値を加算した命令アドレスに分岐する。
+解説: Branch and Link。現在のPC+1をR2にコピーし、現在のPCに即値を加算した命令アドレスに分岐する。
 
 アセンブリ: bl(ims)
 
-機能: {R2 = PC; PC += ims;}
+機能: {R2 = PC + 1; PC += ims;}
 
 
 BA

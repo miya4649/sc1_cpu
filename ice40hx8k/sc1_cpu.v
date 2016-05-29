@@ -74,19 +74,23 @@ module sc1_cpu
   localparam ZERO = 1'd0;
   localparam FFFF = {WIDTH_D{1'b1}};
 
-  wire [WIDTH_I-1:0]        mem_i_o;
+  wire [WIDTH_I-1:0]        mem_i_o_sig;
+  reg [WIDTH_I-1:0]         mem_i_o;
   reg [DEPTH_I-1:0]         mem_i_addr_r;
   reg [DEPTH_I-1:0]         mem_i_addr_w;
   reg [WIDTH_I-1:0]         mem_i_i;
   reg                       mem_i_we;
 
-  wire [WIDTH_D-1:0]        mem_d_o_a;
-  wire [WIDTH_D-1:0]        mem_d_o_b;
+  wire [WIDTH_D-1:0]        mem_d_o_a_sig;
+  wire [WIDTH_D-1:0]        mem_d_o_b_sig;
+  reg [WIDTH_D-1:0]         mem_d_o_a;
+  reg [WIDTH_D-1:0]         mem_d_o_b;
   wire                      mem_d_we_sig;
   reg [WIDTH_D-1:0]         mem_d_i;
   reg [DEPTH_D-1:0]         mem_d_addr_w;
   reg [DEPTH_D-1:0]         mem_d_addr_w_d1;
   reg [DEPTH_D-1:0]         mem_d_addr_w_d2;
+  reg [DEPTH_D-1:0]         mem_d_addr_w_d3;
   reg [DEPTH_D-1:0]         mem_d_addr_r_a;
   reg [DEPTH_D-1:0]         mem_d_addr_r_b;
   reg                       mem_d_we;
@@ -94,6 +98,8 @@ module sc1_cpu
   reg                       cpu_en;
   reg [DEPTH_I-1:0]         pc_d1;
   reg [DEPTH_I-1:0]         pc_d2;
+  reg [DEPTH_I-1:0]         pc_d3;
+  reg [DEPTH_I-1:0]         pc_d4;
   reg [10:0]                stage_init;
   reg [WIDTH_D-1:0]         loop_counter;
   reg [DEPTH_I-1:0]         loop_end;
@@ -110,6 +116,7 @@ module sc1_cpu
   wire [DEPTH_REG-1:0]      reg_b_addr_s1;
 
   reg [WIDTH_I-1:0]         mem_i_o_d1;
+  reg [WIDTH_I-1:0]         mem_i_o_d2;
   wire [6:0]                op;
   wire                      is_type_normal;
   wire                      not_increment;
@@ -128,6 +135,10 @@ module sc1_cpu
   // register file
   reg [WIDTH_REG-1:0]       reg_file[(1 << DEPTH_REG)-1:0];
 
+  // switch source
+  assign source_a = is_mem_a ? mem_d_o_a : reg_file[reg_a_addr];
+  assign source_b = is_mem_b ? mem_d_o_b : reg_file[reg_b_addr];
+
   // decode(stage1)
   assign is_mem_d_s1 = mem_i_o[9];
   assign is_mem_a_s1 = mem_i_o[8];
@@ -140,23 +151,19 @@ module sc1_cpu
   assign reg_b_addr_s1 = mem_i_o[DEPTH_REG+14-1:14];
 
   // decode(stage2)
-  assign op = mem_i_o_d1[6:0];
-  assign is_type_normal = mem_i_o_d1[6];
-  assign is_mem_d = mem_i_o_d1[9];
-  assign is_mem_a = mem_i_o_d1[8];
-  assign is_mem_b = mem_i_o_d1[7];
-  assign reg_d_addr = mem_i_o_d1[DEPTH_REG+26-1:26];
-  assign reg_a_addr = mem_i_o_d1[DEPTH_REG+20-1:20];
-  assign reg_b_addr = mem_i_o_d1[DEPTH_REG+14-1:14];
-  assign im16 = mem_i_o_d1[25:10];
-  assign ims16 = mem_i_o_d1[25:10];
+  assign op = mem_i_o_d2[6:0];
+  assign is_type_normal = mem_i_o_d2[6];
+  assign is_mem_d = mem_i_o_d2[9];
+  assign is_mem_a = mem_i_o_d2[8];
+  assign is_mem_b = mem_i_o_d2[7];
+  assign reg_d_addr = mem_i_o_d2[DEPTH_REG+26-1:26];
+  assign reg_a_addr = mem_i_o_d2[DEPTH_REG+20-1:20];
+  assign reg_b_addr = mem_i_o_d2[DEPTH_REG+14-1:14];
+  assign im16 = mem_i_o_d2[25:10];
+  assign ims16 = mem_i_o_d2[25:10];
 
   // manual pc increment
   assign not_increment = ((op == I_HALT) || (op == I_BC) || (op == I_BL) || (op == I_BA)) ? 1'b1 : 1'b0;
-
-  // switch source
-  assign source_a = is_mem_a ? mem_d_o_a : reg_file[reg_a_addr];
-  assign source_b = is_mem_b ? mem_d_o_b : reg_file[reg_b_addr];
 
   // switch operation
   function [WIDTH_D-1:0] result
@@ -186,6 +193,10 @@ module sc1_cpu
 
   always @(posedge clk)
     begin
+      mem_i_o <= mem_i_o_sig;
+      mem_d_o_a <= mem_d_o_a_sig;
+      mem_d_o_b <= mem_d_o_b_sig;
+
       if (reset == TRUE)
         begin
           stage_init <= ZERO;
@@ -270,12 +281,16 @@ module sc1_cpu
             end
 
           // delay
+          mem_i_o_d2 <= mem_i_o_d1;
           mem_i_o_d1 <= mem_i_o;
+          pc_d4 <= pc_d3;
+          pc_d3 <= pc_d2;
           pc_d2 <= pc_d1;
           pc_d1 <= mem_i_addr_r;
           mem_d_we <= mem_d_we_sig;
-          mem_d_addr_w_d1 <= mem_d_addr_w;
+          mem_d_addr_w_d3 <= mem_d_addr_w_d2;
           mem_d_addr_w_d2 <= mem_d_addr_w_d1;
+          mem_d_addr_w_d1 <= mem_d_addr_w;
 
           // loop counter
           if (loop_end == mem_i_addr_r)
@@ -325,7 +340,7 @@ module sc1_cpu
               case (op)
                 I_HALT:
                   begin
-                    mem_i_addr_r <= pc_d2;
+                    mem_i_addr_r <= pc_d4;
                   end
                 I_NOP:
                   begin
@@ -396,13 +411,13 @@ module sc1_cpu
                       end
                     else
                       begin
-                        mem_i_addr_r <= pc_d2 + ims16;
+                        mem_i_addr_r <= pc_d4 + ims16;
                       end
                   end
                 I_BL:
                   begin
-                    reg_file[SP_REG_LINK] <= pc_d2 + ONE;
-                    mem_i_addr_r <= pc_d2 + ims16;
+                    reg_file[SP_REG_LINK] <= pc_d4 + ONE;
+                    mem_i_addr_r <= pc_d4 + ims16;
                   end
                 I_BA:
                   begin
@@ -411,7 +426,7 @@ module sc1_cpu
                 I_LOOP:
                   begin
                     loop_counter <= reg_file[SP_REG_LOOP_COUNTER];
-                    loop_end <= pc_d2 + reg_file[SP_REG_LOOP_END][DEPTH_I-1:0];
+                    loop_end <= pc_d4 + reg_file[SP_REG_LOOP_END][DEPTH_I-1:0];
                     loop_span <= reg_file[SP_REG_LOOP_SPAN][DEPTH_I-1:0];
                   end
                 I_OUT:
@@ -438,7 +453,7 @@ module sc1_cpu
      .addr_w (mem_i_addr_w),
      .data_in (mem_i_i),
      .we (mem_i_we),
-     .data_out (mem_i_o)
+     .data_out (mem_i_o_sig)
      );
 
   rw_port_ram
@@ -450,10 +465,10 @@ module sc1_cpu
     (
      .clk (clk),
      .addr_r (mem_d_addr_r_a),
-     .addr_w (mem_d_addr_w_d2),
+     .addr_w (mem_d_addr_w_d3),
      .data_in (mem_d_i),
      .we (mem_d_we),
-     .data_out (mem_d_o_a)
+     .data_out (mem_d_o_a_sig)
      );
 
   rw_port_ram
@@ -465,10 +480,10 @@ module sc1_cpu
     (
      .clk (clk),
      .addr_r (mem_d_addr_r_b),
-     .addr_w (mem_d_addr_w_d2),
+     .addr_w (mem_d_addr_w_d3),
      .data_in (mem_d_i),
      .we (mem_d_we),
-     .data_out (mem_d_o_b)
+     .data_out (mem_d_o_b_sig)
      );
 
 endmodule

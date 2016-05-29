@@ -13,47 +13,65 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-module bemicro_max10_start
-  (
-   input        SYS_CLK,
-   output [7:0] USER_LED,
-   input [3:0]  PB
-   );
+`timescale 1ns / 1ps
+
+module testbench;
+  localparam STEP = 20; // 20 ns: 50MHz
+  localparam TICKS = 20000;
 
   localparam WIDTH_D = 32;
   localparam WIDTH_REG = 32;
   localparam DEPTH_I = 8;
   localparam DEPTH_D = 8;
 
-  wire          clk_pll;
+  reg clk;
+  reg reset;
+  wire [WIDTH_REG-1:0] count;
+  integer              i;
 
-  // generate reset signal (push button 1)
-  wire          reset;
-  reg           reset_reg1;
-  reg           reset_reg2;
-  assign reset = reset_reg2;
-
-  always @(posedge clk_pll)
+  initial
     begin
-      reset_reg1 <= ~PB[0];
-      reset_reg2 <= reset_reg1;
+      $dumpfile("wave.vcd");
+      $dumpvars(5, testbench);
+      for (i = 0; i < 16; i = i + 1)
+        begin
+          $dumpvars(0, testbench.sc1_cpu_0.reg_file[i]);
+          $dumpvars(0, testbench.sc1_cpu_0.mem_d_a.ram[i]);
+        end
+      $monitor("count: %d", count);
     end
 
-  wire [WIDTH_REG-1:0] out_data;
-  assign USER_LED = ~(out_data[7:0]);
+  // generate clock signal
+  initial
+    begin
+      clk = 1'b1;
+      forever
+        begin
+          #(STEP / 2) clk = ~clk;
+        end
+    end
 
-  wire [DEPTH_I-1:0]   rom_addr;
-  wire [31:0]          rom_data;
+  // generate reset signal
+  initial
+    begin
+      reset = 1'b0;
+      repeat (2) @(posedge clk) reset <= 1'b1;
+      @(posedge clk) reset <= 1'b0;
+    end
 
-  simple_pll simple_pll_0
-    (
-     .inclk0 (SYS_CLK),
-     .c0 (clk_pll)
-     );
+  // stop simulation after TICKS
+  initial
+    begin
+      repeat (TICKS) @(posedge clk);
+      $finish;
+    end
+
+  wire [DEPTH_I-1:0]  rom_addr;
+  wire [31:0]         rom_data;
 
   rom rom_0
     (
-     .clk (clk_pll),
+     .clk (clk),
      .addr (rom_addr),
      .data_out (rom_data)
      );
@@ -67,12 +85,12 @@ module bemicro_max10_start
       )
   sc1_cpu_0
     (
-     .clk (clk_pll),
+     .clk (clk),
      .reset (reset),
      .rom_addr (rom_addr),
      .rom_data (rom_data),
      .port_in ({WIDTH_REG{1'b0}}),
-     .port_out (out_data)
+     .port_out (count)
      );
 
 endmodule

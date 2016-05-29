@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016, miya
+  Copyright (c) 2016, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -13,11 +13,11 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-module bemicro_max10_start
+module top
   (
-   input        SYS_CLK,
+   input        CLK_24MHZ,
    output [7:0] USER_LED,
-   input [3:0]  PB
+   input [0:0]  TACT
    );
 
   localparam WIDTH_D = 32;
@@ -25,18 +25,16 @@ module bemicro_max10_start
   localparam DEPTH_I = 8;
   localparam DEPTH_D = 8;
 
-  wire          clk_pll;
+  wire clk_pll;
 
   // generate reset signal (push button 1)
-  wire          reset;
+  reg           reset;
   reg           reset_reg1;
-  reg           reset_reg2;
-  assign reset = reset_reg2;
 
   always @(posedge clk_pll)
     begin
-      reset_reg1 <= ~PB[0];
-      reset_reg2 <= reset_reg1;
+      reset_reg1 <= ~TACT[0];
+      reset <= reset_reg1;
     end
 
   wire [WIDTH_REG-1:0] out_data;
@@ -47,8 +45,10 @@ module bemicro_max10_start
 
   simple_pll simple_pll_0
     (
-     .inclk0 (SYS_CLK),
-     .c0 (clk_pll)
+     .refclk (CLK_24MHZ),
+     .rst (1'b0),
+     .outclk_0 (clk_pll),
+     .locked ()
      );
 
   rom rom_0
