@@ -33,12 +33,12 @@ module top
 
   // generate reset signal (push button 1)
   reg           reset;
-  reg           reset_reg1;
+  reg           reset1;
 
   always @(posedge CLOCK_50)
     begin
-      reset_reg1 <= ~RESET_N;
-      reset <= reset_reg1;
+      reset1 <= ~RESET_N;
+      reset <= reset1;
     end
 
   wire [WIDTH_REG-1:0] out_data;

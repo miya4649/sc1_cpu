@@ -18,7 +18,11 @@ http://cellspe.matrix.jp/zerofpga/sjr_ice.html
 
 ターミナルで、
 
-cd sc1_cpu/ice40hx8k
+cd sc1_cpu
+
+patch -p1 < patches/icestorm.patch
+
+cd ice40hx8k
 
 make
 

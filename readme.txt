@@ -33,7 +33,12 @@ MAX10-FB基板ではボードのI/O電圧を3.3Vに設定することを前提�
 
 * iCE40HX-8K用のプロジェクトについて
 iCE40HX-8K(開発環境: IceStorm)版は通常版とは仕様が異なる特別バージョンです。詳しくは
-sc1_cpu/sc1_cpu/ice40hx8k/readme.txt
+sc1_cpu/ice40hx8k/readme_icestorm.txt
+を参照してください。
+
+* マルチコア実装のテストについて
+DE0-CV、BeMicro CV A9向けのマルチコア実装のテストです。詳しくは
+sc1_cpu/patches/readme_patches.txt
 を参照してください。
 
 * ビルド・実行方法

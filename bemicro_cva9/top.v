@@ -25,16 +25,25 @@ module top
   localparam DEPTH_I = 8;
   localparam DEPTH_D = 8;
 
-  wire clk_pll;
+  wire          clk;
 
   // generate reset signal (push button 1)
   reg           reset;
-  reg           reset_reg1;
+  reg           reset1;
+  reg           resetpll;
+  reg           resetpll1;
+  wire          pll_locked;
 
-  always @(posedge clk_pll)
+  always @(posedge CLK_24MHZ)
     begin
-      reset_reg1 <= ~TACT[0];
-      reset <= reset_reg1;
+      resetpll1 <= ~TACT[0];
+      resetpll <= resetpll1;
+    end
+
+  always @(posedge clk)
+    begin
+      reset1 <= ~pll_locked;
+      reset <= reset1;
     end
 
   wire [WIDTH_REG-1:0] out_data;
@@ -46,14 +55,14 @@ module top
   simple_pll simple_pll_0
     (
      .refclk (CLK_24MHZ),
-     .rst (1'b0),
-     .outclk_0 (clk_pll),
-     .locked ()
+     .rst (resetpll),
+     .outclk_0 (clk),
+     .locked (pll_locked)
      );
 
   rom rom_0
     (
-     .clk (clk_pll),
+     .clk (clk),
      .addr (rom_addr),
      .data_out (rom_data)
      );
@@ -67,7 +76,7 @@ module top
       )
   sc1_cpu_0
     (
-     .clk (clk_pll),
+     .clk (clk),
      .reset (reset),
      .rom_addr (rom_addr),
      .rom_data (rom_data),
