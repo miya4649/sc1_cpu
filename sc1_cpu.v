@@ -126,7 +126,7 @@ module sc1_cpu
   wire [WIDTH_D-1:0]        source_b;
 
   // register file
-  reg [WIDTH_REG-1:0]       reg_file[(1 << DEPTH_REG)-1:0];
+  reg [WIDTH_REG-1:0]       reg_file [0:(1 << DEPTH_REG)-1];
 
   // decode(stage1)
   assign is_mem_d_s1 = mem_i_o[9];

@@ -41,6 +41,11 @@ DE0-CV、BeMicro CV A9向けのマルチコア実装のテストです。詳し�
 sc1_cpu/patches/readme_patches.txt
 を参照してください。
 
+* SIMD命令実装のテストについて
+INT8 SIMD命令の実装のテストです。詳しくは
+sc1_cpu/patches/readme_patches.txt
+を参照してください。
+
 * ビルド・実行方法
 
 Quartus II Ver.15.0以上 でプロジェクトファイルを開いて「Start Compilation」、「Programmer」で転送して実行します。

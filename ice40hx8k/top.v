@@ -23,8 +23,7 @@ module top
   localparam WIDTH_REG = 32;
   localparam DEPTH_I = 8;
   localparam DEPTH_D = 8;
-
-  localparam RESET_TIMER_BIT = 22;
+  localparam RESET_TIMER_BIT = 24;
 
   wire [DEPTH_I-1:0] rom_addr;
   wire [31:0]        rom_data;

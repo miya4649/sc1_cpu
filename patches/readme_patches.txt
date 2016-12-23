@@ -1,3 +1,25 @@
+* simd.patch
+
+8bit整数のSIMD命令のテストです。
+v8mv, v8ceq, v8cgt, v8cgta, v8add, v8sub, v8mul, v8sr, v8sl, v8sra が追加されます。
+レジスタを8bitに区切り、各要素ごとに演算を行います。
+sc1_cpuをWIDTH_D = 32, WIDTH_REG = 32でインスタンス化した場合は32bit / 8bit = 4要素を同時に処理できます。
+256bitでインスタンス化した場合は32要素を同時に処理できます。（スカラ演算は256bit整数になります。）
+大きな幅のスカラ演算が必要ない場合はSCALAR_BITS = 32等に設定すれば回路規模を抑えることができます。
+
+** パッチの当て方
+
+cd sc1_cpu
+
+patch -p1 < patches/simd.patch
+
+パッチを当ててから各プロジェクトを開いて合成します。
+
+通常版に戻すには、
+
+patch -Rp1 < patches/simd.patch
+
+
 * multicore_test.patch
 
 複数のsc1_cpuコアを実装するテストです。DE0-CVとBemicroCV A9に対応しています。
@@ -13,9 +35,6 @@ patch -p1 < patches/multicore_test.patch
 
 パッチを当ててから各プロジェクトを開いて合成します。
 
-通常版に戻すには、
-
-patch -Rp1 < patches/multicore_test.patch
 
 * icestorm.patch
 

@@ -1,6 +1,6 @@
 diff -Naur sc1_cpu/asm/Program.java sc1_cpu_multicore_test/asm/Program.java
---- sc1_cpu/asm/Program.java	2016-06-05 12:00:14.614498251 +0000
-+++ sc1_cpu_multicore_test/asm/Program.java	2016-06-05 12:00:14.618498252 +0000
+--- sc1_cpu/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
 @@ -191,11 +191,58 @@
      as_nop(0,0,0,0,0,0,0,0,0);
    }
@@ -62,8 +62,8 @@ diff -Naur sc1_cpu/asm/Program.java sc1_cpu_multicore_test/asm/Program.java
    }
  }
 diff -Naur sc1_cpu/bemicro_cva9/top.v sc1_cpu_multicore_test/bemicro_cva9/top.v
---- sc1_cpu/bemicro_cva9/top.v	2016-06-05 12:00:14.614498251 +0000
-+++ sc1_cpu_multicore_test/bemicro_cva9/top.v	2016-06-05 12:00:14.618498252 +0000
+--- sc1_cpu/bemicro_cva9/top.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/bemicro_cva9/top.v	2016-12-22 21:32:14.000000000 +0900
 @@ -20,6 +20,7 @@
     input [0:0]  TACT
     );
@@ -158,8 +158,8 @@ diff -Naur sc1_cpu/bemicro_cva9/top.v sc1_cpu_multicore_test/bemicro_cva9/top.v
 -
  endmodule
 diff -Naur sc1_cpu/de0-cv/top.v sc1_cpu_multicore_test/de0-cv/top.v
---- sc1_cpu/de0-cv/top.v	2016-06-05 12:00:14.614498251 +0000
-+++ sc1_cpu_multicore_test/de0-cv/top.v	2016-06-05 12:00:14.618498252 +0000
+--- sc1_cpu/de0-cv/top.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/de0-cv/top.v	2016-12-22 21:32:14.000000000 +0900
 @@ -26,6 +26,7 @@
     input        RESET_N
     );
@@ -239,8 +239,8 @@ diff -Naur sc1_cpu/de0-cv/top.v sc1_cpu_multicore_test/de0-cv/top.v
    // turn off hex leds
    assign HEX0 = 7'b1111111;
 diff -Naur sc1_cpu/rom.v sc1_cpu_multicore_test/rom.v
---- sc1_cpu/rom.v	2016-06-05 12:00:14.614498251 +0000
-+++ sc1_cpu_multicore_test/rom.v	2016-06-05 12:00:14.618498252 +0000
+--- sc1_cpu/rom.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/rom.v	2016-12-22 21:32:14.000000000 +0900
 @@ -11,45 +11,45 @@
          8'h00: data_out <= 32'h00000001;
          8'h01: data_out <= 32'h00000003;

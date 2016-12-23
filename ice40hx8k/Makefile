@@ -2,7 +2,7 @@ PROJECT = top
 PCF = hx8kboard.pcf
 DEVICE_SHORT = 8k
 DEVICE = hx$(DEVICE_SHORT)
-SOURCE = top.v ../sc1_cpu.v ../rom.v ../rw_port_ram.v
+SOURCE = *.v ../*.v
 
 all: $(PROJECT).rpt $(PROJECT).bin
 
@@ -10,7 +10,7 @@ $(PROJECT).blif: $(SOURCE)
 	yosys -p 'synth_ice40 -top top -blif $(PROJECT).blif' $(SOURCE)
 
 $(PROJECT).asc: $(PCF) $(PROJECT).blif
-	arachne-pnr -d $(DEVICE_SHORT) -o $(PROJECT).asc -p $(PCF) $(PROJECT).blif
+	arachne-pnr -r -d $(DEVICE_SHORT) -o $(PROJECT).asc -p $(PCF) $(PROJECT).blif
 
 $(PROJECT).bin: $(PROJECT).asc
 	icepack $(PROJECT).asc $(PROJECT).bin

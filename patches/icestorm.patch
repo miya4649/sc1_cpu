@@ -1,6 +1,6 @@
 diff -Naur sc1_cpu/asm/Program.java sc1_cpu_ice/asm/Program.java
---- sc1_cpu/asm/Program.java	2016-06-05 13:07:22.046589681 +0000
-+++ sc1_cpu_ice/asm/Program.java	2016-06-05 13:07:22.050589681 +0000
+--- sc1_cpu/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_ice/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
 @@ -54,6 +54,8 @@
      as_bc(addr_rel(L_0)); // if (r1 != 0) goto L_0
      as_nop(0,0,0,0,0,0,0,0,0);
@@ -91,8 +91,8 @@ diff -Naur sc1_cpu/asm/Program.java sc1_cpu_ice/asm/Program.java
  
    @Override
 diff -Naur sc1_cpu/rom.v sc1_cpu_ice/rom.v
---- sc1_cpu/rom.v	2016-06-05 13:07:22.046589681 +0000
-+++ sc1_cpu_ice/rom.v	2016-06-05 13:07:22.050589681 +0000
+--- sc1_cpu/rom.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_ice/rom.v	2016-12-22 21:32:14.000000000 +0900
 @@ -16,48 +16,48 @@
          8'h05: data_out <= 32'h28820040;
          8'h06: data_out <= 32'h0003fc03;
@@ -176,8 +176,8 @@ diff -Naur sc1_cpu/rom.v sc1_cpu_ice/rom.v
          8'h33: data_out <= 32'h00000000;
          8'h34: data_out <= 32'h00000000;
 diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_ice/sc1_cpu.v
---- sc1_cpu/sc1_cpu.v	2016-06-05 13:07:22.046589681 +0000
-+++ sc1_cpu_ice/sc1_cpu.v	2016-06-05 13:07:22.050589681 +0000
+--- sc1_cpu/sc1_cpu.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_ice/sc1_cpu.v	2016-12-22 21:32:14.000000000 +0900
 @@ -74,19 +74,23 @@
    localparam ZERO = 1'd0;
    localparam FFFF = {WIDTH_D{1'b1}};
@@ -224,7 +224,7 @@ diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_ice/sc1_cpu.v
    wire                      not_increment;
 @@ -128,6 +135,10 @@
    // register file
-   reg [WIDTH_REG-1:0]       reg_file[(1 << DEPTH_REG)-1:0];
+   reg [WIDTH_REG-1:0]       reg_file [0:(1 << DEPTH_REG)-1];
  
 +  // switch source
 +  assign source_a = is_mem_a ? mem_d_o_a : reg_file[reg_a_addr];
