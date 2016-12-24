@@ -1,6 +1,6 @@
 diff -Naur sc1_cpu/asm/Asm.java sc1_cpu_vec/asm/Asm.java
---- sc1_cpu/asm/Asm.java	2016-12-22 21:32:14.000000000 +0900
-+++ sc1_cpu_vec/asm/Asm.java	2016-12-22 21:32:14.000000000 +0900
+--- sc1_cpu/asm/Asm.java	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/asm/Asm.java	2016-12-23 22:39:25.000000000 +0900
 @@ -35,6 +35,10 @@
    private static final int I_BA   = 0x0a;
    private static final int I_LOOP = 0x0b;
@@ -81,8 +81,8 @@ diff -Naur sc1_cpu/asm/Asm.java sc1_cpu_vec/asm/Asm.java
 +  }
  }
 diff -Naur sc1_cpu/asm/Program.java sc1_cpu_vec/asm/Program.java
---- sc1_cpu/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
-+++ sc1_cpu_vec/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
+--- sc1_cpu/asm/Program.java	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/asm/Program.java	2016-12-23 22:39:25.000000000 +0900
 @@ -191,11 +191,60 @@
      as_nop(0,0,0,0,0,0,0,0,0);
    }
@@ -146,8 +146,8 @@ diff -Naur sc1_cpu/asm/Program.java sc1_cpu_vec/asm/Program.java
    }
  }
 diff -Naur sc1_cpu/rom.v sc1_cpu_vec/rom.v
---- sc1_cpu/rom.v	2016-12-22 21:32:14.000000000 +0900
-+++ sc1_cpu_vec/rom.v	2016-12-22 21:32:14.000000000 +0900
+--- sc1_cpu/rom.v	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/rom.v	2016-12-23 22:39:25.000000000 +0900
 @@ -11,45 +11,45 @@
          8'h00: data_out <= 32'h00000001;
          8'h01: data_out <= 32'h00000003;
@@ -234,17 +234,9 @@ diff -Naur sc1_cpu/rom.v sc1_cpu_vec/rom.v
          8'h2b: data_out <= 32'h00000000;
          8'h2c: data_out <= 32'h00000000;
 diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_vec/sc1_cpu.v
---- sc1_cpu/sc1_cpu.v	2016-12-22 21:32:14.000000000 +0900
-+++ sc1_cpu_vec/sc1_cpu.v	2016-12-22 21:32:14.000000000 +0900
-@@ -19,6 +19,7 @@
-     parameter WIDTH_I = 32,
-     parameter WIDTH_D = 32,
-     parameter WIDTH_REG = 32,
-+    parameter WIDTH_SCALAR = WIDTH_REG,
-     parameter DEPTH_I = 8,
-     parameter DEPTH_D = 8,
-     parameter DEPTH_REG = 4
-@@ -32,6 +33,8 @@
+--- sc1_cpu/sc1_cpu.v	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/sc1_cpu.v	2016-12-23 22:39:25.000000000 +0900
+@@ -32,6 +32,8 @@
     output reg [WIDTH_D-1:0] port_out
     );
  
@@ -253,7 +245,7 @@ diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_vec/sc1_cpu.v
    localparam SP_REG_MVI = 4'd0;
    localparam SP_REG_BA = 4'd0;
    localparam SP_REG_CP = 4'd1;
-@@ -55,6 +58,10 @@
+@@ -55,6 +57,10 @@
    localparam I_BA   = 7'h0a;
    localparam I_LOOP = 7'h0b;
    localparam I_OUT  = 7'h0c;
@@ -264,7 +256,7 @@ diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_vec/sc1_cpu.v
    // normal type
    localparam I_ADD  = 7'h40;
    localparam I_SUB  = 7'h41;
-@@ -67,6 +74,12 @@
+@@ -67,6 +73,12 @@
    localparam I_SRA  = 7'h48;
    localparam I_MUL  = 7'h49;
    localparam I_IN   = 7'h4a;
@@ -277,29 +269,17 @@ diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_vec/sc1_cpu.v
  
    localparam TRUE = 1'b1;
    localparam FALSE = 1'b0;
-@@ -163,19 +176,62 @@
+@@ -163,6 +175,7 @@
      (
       input [6:0] op_result
       );
 +    integer      i;
      begin
        case (op_result)
--        I_ADD:   result = source_a + source_b;
--        I_SUB:   result = source_a - source_b;
-+        I_ADD:   result = source_a[WIDTH_SCALAR-1:0] + source_b[WIDTH_SCALAR-1:0];
-+        I_SUB:   result = source_a[WIDTH_SCALAR-1:0] - source_b[WIDTH_SCALAR-1:0];
-         I_AND:   result = source_a & source_b;
-         I_OR:    result = source_a | source_b;
-         I_XOR:   result = source_a ^ source_b;
-         I_NOT:   result = ~source_a;
--        I_SR:    result = source_a >> source_b;
--        I_SL:    result = source_a << source_b;
--        I_SRA:   result = $signed(source_a) >>> source_b;
--        I_MUL:   result = $signed(source_a) * $signed(source_b);
-+        I_SR:    result = source_a[WIDTH_SCALAR-1:0] >> source_b;
-+        I_SL:    result = source_a[WIDTH_SCALAR-1:0] << source_b;
-+        I_SRA:   result = $signed(source_a[WIDTH_SCALAR-1:0]) >>> source_b;
-+        I_MUL:   result = $signed(source_a[WIDTH_SCALAR-1:0]) * $signed(source_b[WIDTH_SCALAR-1:0]);
+         I_ADD:   result = source_a + source_b;
+@@ -176,6 +189,48 @@
+         I_SRA:   result = $signed(source_a) >>> source_b;
+         I_MUL:   result = $signed(source_a) * $signed(source_b);
          I_IN:    result = port_in;
 +        I_V8ADD:
 +          begin
@@ -346,34 +326,7 @@ diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_vec/sc1_cpu.v
          default:;
        endcase
      end
-@@ -357,7 +413,7 @@
-                   end
-                 I_CEQ:
-                   begin
--                    if (source_a == source_b)
-+                    if (source_a[WIDTH_SCALAR-1:0] == source_b[WIDTH_SCALAR-1:0])
-                       begin
-                         reg_file[SP_REG_CP] <= FFFF;
-                       end
-@@ -368,7 +424,7 @@
-                   end
-                 I_CGT:
-                   begin
--                    if (source_a > source_b)
-+                    if (source_a[WIDTH_SCALAR-1:0] > source_b[WIDTH_SCALAR-1:0])
-                       begin
-                         reg_file[SP_REG_CP] <= FFFF;
-                       end
-@@ -379,7 +435,7 @@
-                   end
-                 I_CGTA:
-                   begin
--                    if ($signed(source_a) > $signed(source_b))
-+                    if ($signed(source_a[WIDTH_SCALAR-1:0]) > $signed(source_b[WIDTH_SCALAR-1:0]))
-                       begin
-                         reg_file[SP_REG_CP] <= FFFF;
-                       end
-@@ -418,6 +474,69 @@
+@@ -418,6 +473,69 @@
                    begin
                      port_out <= source_a;
                    end
