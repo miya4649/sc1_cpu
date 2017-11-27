@@ -1,0 +1,398 @@
+diff -Naur sc1_cpu/asm/Asm.java sc1_cpu_vec/asm/Asm.java
+--- sc1_cpu/asm/Asm.java	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/asm/Asm.java	2016-12-23 22:39:25.000000000 +0900
+@@ -35,6 +35,10 @@
+   private static final int I_BA   = 0x0a;
+   private static final int I_LOOP = 0x0b;
+   private static final int I_OUT  = 0x0c;
++  private static final int I_V8MV = 0x0d;
++  private static final int I_V8CEQ = 0x0e;
++  private static final int I_V8CGT = 0x0f;
++  private static final int I_V8CGTA = 0x10;
+   // normal type
+   private static final int I_ADD  = 0x40;
+   private static final int I_SUB  = 0x41;
+@@ -47,6 +51,12 @@
+   private static final int I_SRA  = 0x48;
+   private static final int I_MUL  = 0x49;
+   private static final int I_IN   = 0x4a;
++  private static final int I_V8ADD = 0x4b;
++  private static final int I_V8SUB = 0x4c;
++  private static final int I_V8MUL = 0x4d;
++  private static final int I_V8SR  = 0x4e;
++  private static final int I_V8SL  = 0x4f;
++  private static final int I_V8SRA = 0x50;
+ 
+   private static final String header = "module rom\n"
+     + "  (\n"
+@@ -281,4 +291,54 @@
+   {
+     set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_MUL);
+   }
++
++  public void as_v8add(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_V8ADD);
++  }
++
++  public void as_v8sub(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_V8SUB);
++  }
++
++  public void as_v8mul(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_V8MUL);
++  }
++
++  public void as_v8mv(int reg_d, int reg_a, int add_d, int add_a, int is_mem_d, int is_mem_a)
++  {
++    set_inst_normal(reg_d, reg_a, 0, add_d, add_a, 0, is_mem_d, is_mem_a, 0, I_V8MV);
++  }
++
++  public void as_v8ceq(int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(0, reg_a, reg_b, 0, add_a, add_b, 0, is_mem_a, is_mem_b, I_V8CEQ);
++  }
++
++  public void as_v8cgt(int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(0, reg_a, reg_b, 0, add_a, add_b, 0, is_mem_a, is_mem_b, I_V8CGT);
++  }
++
++  public void as_v8cgta(int reg_a, int reg_b, int add_a, int add_b, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(0, reg_a, reg_b, 0, add_a, add_b, 0, is_mem_a, is_mem_b, I_V8CGTA);
++  }
++
++  public void as_v8sr(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_V8SR);
++  }
++
++  public void as_v8sl(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_V8SL);
++  }
++
++  public void as_v8sra(int reg_d, int reg_a, int reg_b, int add_d, int add_a, int add_b, int is_mem_d, int is_mem_a, int is_mem_b)
++  {
++    set_inst_normal(reg_d, reg_a, reg_b, add_d, add_a, add_b, is_mem_d, is_mem_a, is_mem_b, I_V8SRA);
++  }
+ }
+diff -Naur sc1_cpu/asm/Program.java sc1_cpu_vec/asm/Program.java
+--- sc1_cpu/asm/Program.java	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/asm/Program.java	2016-12-23 22:39:25.000000000 +0900
+@@ -191,11 +191,60 @@
+     as_nop(0,0,0,0,0,0,0,0,0);
+   }
+ 
++  private void example4()
++  {
++    // example4: Vector example
++    int way = 32 / 8;
++    as_nop(0,0,0,0,0,0,0,0,0);
++
++    as_mvi(0); // r0 = 0
++    as_add(8,0,0, 0,0,0, 0,0,0); // (zero) r8 = r0 + r0 = 0
++    as_add(12,0,0, 0,0,0, 0,0,0); // r12 = r0 + r0 = 0
++    as_add(13,0,0, 0,0,0, 0,0,0); // r13 = r0 + r0 = 0
++    as_add(14,0,0, 0,0,0, 0,0,0); // r14 = r0 + r0 = 0
++    as_mvi(1); // r0 = 1
++    as_add(9,0,8, 0,0,0, 0,0,0); // (one) r9 = r0 + r8 = 1
++    as_mvi(8); // r0 = 8
++    as_add(10,0,8, 0,0,0, 0,0,0); // r10 = r0 + r8 = 8
++    as_mvi(16); // r0 = 16
++    as_add(11,0,8, 0,0,0, 0,0,0); // r11 = r0 + r8 = 16
++
++    as_mvi(way - 1); // loop count - 1
++    as_add(3,0,8, 0,0,0, 0,0,0); // r3 = loop count-1
++    as_mvi(addr_abs(L_2) - addr_abs(L_0));
++    as_add(4,0,8, 0,0,0, 0,0,0); // r4 = the offset of the end of the loop
++    as_mvi(addr_abs(L_1) - addr_abs(L_2) + 1);
++    as_add(5,0,8, 0,0,0, 0,0,0); // r5 = jump offset
++    as_loop();
++    label(L_0);
++    label(L_1);
++    // r12 = 0x01020304...
++    // r14 = 0x10101010...
++    as_sl(12,12,10, 0,0,0, 0,0,0); // r12 = r12 << r10;
++    as_add(13,13,9, 0,0,0, 0,0,0); // r13 = r13 + r9;
++    as_or(12,12,13, 0,0,0, 0,0,0); // r12 = r12 | r13;
++    as_sl(14,14,10, 0,0,0, 0,0,0); // r14 = r14 << r10;
++    as_or(14,14,11, 0,0,0, 0,0,0); // r14 = r14 | r11;
++    label(L_2);
++
++    as_v8mul(15,12,12, 0,0,0, 0,0,0); // r15.v8 = r12.v8 * r12.v8;
++    as_v8add(15,15,12, 0,0,0, 0,0,0); // r15.v8 = r15.v8 + r12.v8;
++    as_v8sra(13,15,9, 0,0,0, 0,0,0); // r13.v8 = r15.v8 >>> r9;
++    as_v8cgt(15,14, 0,0, 0,0); // if r15.v8 > r14.v8
++    as_v8mv(15,13, 0,0, 0,0);  // { r15.v8 = r13.v8;}
++
++    as_out(15,0,0);
++    as_halt();
++    as_nop(0,0,0,0,0,0,0,0,0);
++    as_nop(0,0,0,0,0,0,0,0,0);
++  }
++
+   @Override
+   public void program()
+   {
+     //example1();
+     //example2();
+-    example3();
++    //example3();
++    example4();
+   }
+ }
+diff -Naur sc1_cpu/rom.v sc1_cpu_vec/rom.v
+--- sc1_cpu/rom.v	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/rom.v	2016-12-23 22:39:25.000000000 +0900
+@@ -11,45 +11,45 @@
+         8'h00: data_out <= 32'h00000001;
+         8'h01: data_out <= 32'h00000003;
+         8'h02: data_out <= 32'h20000040;
+-        8'h03: data_out <= 32'h00000403;
+-        8'h04: data_out <= 32'h24020040;
+-        8'h05: data_out <= 32'h28820040;
+-        8'h06: data_out <= 32'h0003fc03;
+-        8'h07: data_out <= 32'h0c020040;
+-        8'h08: data_out <= 32'h00001003;
+-        8'h09: data_out <= 32'h10020040;
+-        8'h0a: data_out <= 32'h03fffc03;
+-        8'h0b: data_out <= 32'h14020040;
+-        8'h0c: data_out <= 32'h0000000b;
+-        8'h0d: data_out <= 32'h20820381;
+-        8'h0e: data_out <= 32'h00000001;
+-        8'h0f: data_out <= 32'h24a21240;
+-        8'h10: data_out <= 32'h28a24040;
+-        8'h11: data_out <= 32'h28820040;
+-        8'h12: data_out <= 32'h00040003;
+-        8'h13: data_out <= 32'h2c020040;
+-        8'h14: data_out <= 32'h00b40003;
+-        8'h15: data_out <= 32'h0004c404;
+-        8'h16: data_out <= 32'h0c020040;
+-        8'h17: data_out <= 32'h00000c03;
+-        8'h18: data_out <= 32'h10020040;
+-        8'h19: data_out <= 32'h00000003;
+-        8'h1a: data_out <= 32'h14020040;
+-        8'h1b: data_out <= 32'h0000000b;
+-        8'h1c: data_out <= 32'h00000001;
+-        8'h1d: data_out <= 32'h00000001;
+-        8'h1e: data_out <= 32'h00000001;
+-        8'h1f: data_out <= 32'h20a20381;
+-        8'h20: data_out <= 32'h0080090c;
+-        8'h21: data_out <= 32'h28a24040;
+-        8'h22: data_out <= 32'h00b28006;
+-        8'h23: data_out <= 32'h03ffc408;
+-        8'h24: data_out <= 32'h00000001;
+-        8'h25: data_out <= 32'h00000001;
+-        8'h26: data_out <= 32'h04824040;
+-        8'h27: data_out <= 32'h03ffa808;
+-        8'h28: data_out <= 32'h00000001;
+-        8'h29: data_out <= 32'h00000001;
++        8'h03: data_out <= 32'h30000040;
++        8'h04: data_out <= 32'h34000040;
++        8'h05: data_out <= 32'h38000040;
++        8'h06: data_out <= 32'h00000403;
++        8'h07: data_out <= 32'h24020040;
++        8'h08: data_out <= 32'h00002003;
++        8'h09: data_out <= 32'h28020040;
++        8'h0a: data_out <= 32'h00004003;
++        8'h0b: data_out <= 32'h2c020040;
++        8'h0c: data_out <= 32'h00000c03;
++        8'h0d: data_out <= 32'h0c020040;
++        8'h0e: data_out <= 32'h00001403;
++        8'h0f: data_out <= 32'h10020040;
++        8'h10: data_out <= 32'h03fff003;
++        8'h11: data_out <= 32'h14020040;
++        8'h12: data_out <= 32'h0000000b;
++        8'h13: data_out <= 32'h30c28047;
++        8'h14: data_out <= 32'h34d24040;
++        8'h15: data_out <= 32'h30c34043;
++        8'h16: data_out <= 32'h38e28047;
++        8'h17: data_out <= 32'h38e2c043;
++        8'h18: data_out <= 32'h3cc3004d;
++        8'h19: data_out <= 32'h3cf3004b;
++        8'h1a: data_out <= 32'h34f24050;
++        8'h1b: data_out <= 32'h00f3800f;
++        8'h1c: data_out <= 32'h3cd0000d;
++        8'h1d: data_out <= 32'h00f0000c;
++        8'h1e: data_out <= 32'h00000000;
++        8'h1f: data_out <= 32'h00000001;
++        8'h20: data_out <= 32'h00000001;
++        8'h21: data_out <= 32'h00000000;
++        8'h22: data_out <= 32'h00000000;
++        8'h23: data_out <= 32'h00000000;
++        8'h24: data_out <= 32'h00000000;
++        8'h25: data_out <= 32'h00000000;
++        8'h26: data_out <= 32'h00000000;
++        8'h27: data_out <= 32'h00000000;
++        8'h28: data_out <= 32'h00000000;
++        8'h29: data_out <= 32'h00000000;
+         8'h2a: data_out <= 32'h00000000;
+         8'h2b: data_out <= 32'h00000000;
+         8'h2c: data_out <= 32'h00000000;
+diff -Naur sc1_cpu/sc1_cpu.v sc1_cpu_vec/sc1_cpu.v
+--- sc1_cpu/sc1_cpu.v	2016-12-23 22:39:25.000000000 +0900
++++ sc1_cpu_vec/sc1_cpu.v	2016-12-23 22:39:25.000000000 +0900
+@@ -32,6 +32,8 @@
+    output reg [WIDTH_D-1:0] port_out
+    );
+ 
++  localparam VEC8_WAY = (WIDTH_REG / 8);
++
+   localparam SP_REG_MVI = 4'd0;
+   localparam SP_REG_BA = 4'd0;
+   localparam SP_REG_CP = 4'd1;
+@@ -55,6 +57,10 @@
+   localparam I_BA   = 7'h0a;
+   localparam I_LOOP = 7'h0b;
+   localparam I_OUT  = 7'h0c;
++  localparam I_V8MV  = 7'h0d;
++  localparam I_V8CEQ  = 7'h0e;
++  localparam I_V8CGT  = 7'h0f;
++  localparam I_V8CGTA  = 7'h10;
+   // normal type
+   localparam I_ADD  = 7'h40;
+   localparam I_SUB  = 7'h41;
+@@ -67,6 +73,12 @@
+   localparam I_SRA  = 7'h48;
+   localparam I_MUL  = 7'h49;
+   localparam I_IN   = 7'h4a;
++  localparam I_V8ADD = 7'h4b;
++  localparam I_V8SUB = 7'h4c;
++  localparam I_V8MUL = 7'h4d;
++  localparam I_V8SR  = 7'h4e;
++  localparam I_V8SL  = 7'h4f;
++  localparam I_V8SRA = 7'h50;
+ 
+   localparam TRUE = 1'b1;
+   localparam FALSE = 1'b0;
+@@ -163,6 +175,7 @@
+     (
+      input [6:0] op_result
+      );
++    integer      i;
+     begin
+       case (op_result)
+         I_ADD:   result = source_a + source_b;
+@@ -176,6 +189,48 @@
+         I_SRA:   result = $signed(source_a) >>> source_b;
+         I_MUL:   result = $signed(source_a) * $signed(source_b);
+         I_IN:    result = port_in;
++        I_V8ADD:
++          begin
++            for (i = 0; i < VEC8_WAY; i = i + 1)
++              begin
++                result[i*8 +: 8] = source_a[i*8 +: 8] + source_b[i*8 +: 8];
++              end
++          end
++        I_V8SUB:
++          begin
++            for (i = 0; i < VEC8_WAY; i = i + 1)
++              begin
++                result[i*8 +: 8] = source_a[i*8 +: 8] - source_b[i*8 +: 8];
++              end
++          end
++        I_V8MUL:
++          begin
++            for (i = 0; i < VEC8_WAY; i = i + 1)
++              begin
++                result[i*8 +: 8] = $signed(source_a[i*8 +: 8]) * $signed(source_b[i*8 +: 8]);
++              end
++          end
++        I_V8SR:
++          begin
++            for (i = 0; i < VEC8_WAY; i = i + 1)
++              begin
++                result[i*8 +: 8] = source_a[i*8 +: 8] >> source_b;
++              end
++          end
++        I_V8SL:
++          begin
++            for (i = 0; i < VEC8_WAY; i = i + 1)
++              begin
++                result[i*8 +: 8] = source_a[i*8 +: 8] << source_b;
++              end
++          end
++        I_V8SRA:
++          begin
++            for (i = 0; i < VEC8_WAY; i = i + 1)
++              begin
++                result[i*8 +: 8] = $signed(source_a[i*8 +: 8]) >>> source_b;
++              end
++          end
+         default:;
+       endcase
+     end
+@@ -418,6 +473,69 @@
+                   begin
+                     port_out <= source_a;
+                   end
++                I_V8MV:
++                  begin : v8mv
++                    integer i;
++                    for (i = 0; i < VEC8_WAY; i = i + 1)
++                      begin
++                        if (reg_file[SP_REG_CP][i*8 +: 8] != ZERO)
++                          begin
++                            if (is_mem_d)
++                              begin
++                                mem_d_i[i*8 +: 8] <= source_a[i*8 +: 8];
++                              end
++                            else
++                              begin
++                                reg_file[reg_d_addr][i*8 +: 8] <= source_a[i*8 +: 8];
++                              end
++                          end
++                      end
++                  end
++                I_V8CEQ:
++                  begin : v8ceq
++                    integer i;
++                    for (i = 0; i < VEC8_WAY; i = i + 1)
++                      begin
++                        if (source_a[i*8 +: 8] == source_b[i*8 +: 8])
++                          begin
++                            reg_file[SP_REG_CP][i*8 +: 8] <= FFFF;
++                          end
++                        else
++                          begin
++                            reg_file[SP_REG_CP][i*8 +: 8] <= ZERO;
++                          end
++                      end
++                  end
++                I_V8CGT:
++                  begin : v8cgt
++                    integer i;
++                    for (i = 0; i < VEC8_WAY; i = i + 1)
++                      begin
++                        if (source_a[i*8 +: 8] > source_b[i*8 +: 8])
++                          begin
++                            reg_file[SP_REG_CP][i*8 +: 8] <= FFFF;
++                          end
++                        else
++                          begin
++                            reg_file[SP_REG_CP][i*8 +: 8] <= ZERO;
++                          end
++                      end
++                  end
++                I_V8CGTA:
++                  begin : v8cgta
++                    integer i;
++                    for (i = 0; i < VEC8_WAY; i = i + 1)
++                      begin
++                        if ($signed(source_a[i*8 +: 8]) > $signed(source_b[i*8 +: 8]))
++                          begin
++                            reg_file[SP_REG_CP][i*8 +: 8] <= FFFF;
++                          end
++                        else
++                          begin
++                            reg_file[SP_REG_CP][i*8 +: 8] <= ZERO;
++                          end
++                      end
++                  end
+                 default: ;
+               endcase
+             end

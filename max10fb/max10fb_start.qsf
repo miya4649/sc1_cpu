@@ -1,12 +1,28 @@
 set_global_assignment -name FAMILY "MAX 10"
 set_global_assignment -name DEVICE 10M08SAE144C8GES
 set_global_assignment -name TOP_LEVEL_ENTITY top
+
 set_global_assignment -name VERILOG_FILE top.v
-set_global_assignment -name VERILOG_FILE ../rw_port_ram.v
-set_global_assignment -name VERILOG_FILE ../sc1_cpu.v
-set_global_assignment -name VERILOG_FILE ../rom.v
 set_global_assignment -name VERILOG_FILE simple_pll.v
+
+set_global_assignment -name VERILOG_FILE ../rw_port_ram.v
+set_global_assignment -name VERILOG_FILE ../r2w1_port_ram.v
+set_global_assignment -name VERILOG_FILE ../sc1_cpu.v
+set_global_assignment -name VERILOG_FILE ../sc1_soc.v
+set_global_assignment -name VERILOG_FILE ../uart.v
+set_global_assignment -name VERILOG_FILE ../audio_output.v
+set_global_assignment -name VERILOG_FILE ../cdc_fifo.v
+set_global_assignment -name VERILOG_FILE ../cdc_synchronizer.v
+set_global_assignment -name VERILOG_FILE ../chr_bg.v
+set_global_assignment -name VERILOG_FILE ../dual_clk_ram.v
+set_global_assignment -name VERILOG_FILE ../shift_register_vector.v
+set_global_assignment -name VERILOG_FILE ../sprite.v
+set_global_assignment -name VERILOG_FILE ../vga_iface.v
+set_global_assignment -name VERILOG_FILE ../default_code_rom.v
+set_global_assignment -name VERILOG_FILE ../default_data_rom.v
+
 set_global_assignment -name SDC_FILE max10fb_start.sdc
+
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 15.1.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "00:00:00  MAY 19, 2016"
 set_global_assignment -name LAST_QUARTUS_VERSION 15.1.1
@@ -23,9 +39,17 @@ set_global_assignment -name INTERNAL_FLASH_UPDATE_MODE "SINGLE IMAGE WITH ERAM"
 
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 set_location_assignment PIN_27 -to clk
-set_location_assignment PIN_121 -to led[2]
-set_location_assignment PIN_122 -to led[1]
-set_location_assignment PIN_120 -to led[0]
+set_location_assignment PIN_121 -to led_n[2]
+set_location_assignment PIN_122 -to led_n[1]
+set_location_assignment PIN_120 -to led_n[0]
 set_location_assignment PIN_123 -to reset_n
 
-
+set_location_assignment PIN_124 -to cn2_1
+set_location_assignment PIN_127 -to cn2_2
+set_location_assignment PIN_130 -to cn2_3
+set_location_assignment PIN_131 -to cn2_4
+set_location_assignment PIN_132 -to cn2_5
+set_location_assignment PIN_134 -to cn2_6
+set_location_assignment PIN_135 -to cn2_7
+set_location_assignment PIN_140 -to cn2_8
+set_location_assignment PIN_141 -to cn2_9

@@ -1,0 +1,328 @@
+diff -Naur sc1_cpu/asm/Program.java sc1_cpu_multicore_test/asm/Program.java
+--- sc1_cpu/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/asm/Program.java	2016-12-22 21:32:14.000000000 +0900
+@@ -191,11 +191,58 @@
+     as_nop(0,0,0,0,0,0,0,0,0);
+   }
+ 
++  private void example4()
++  {
++    // example4: LED flasher for multicore
++    as_nop(0,0,0,0,0,0,0,0,0);
++    as_mvi(0); // r0 = 0
++    as_add(8,0,0, 0,0,0, 0,0,0); // r8 = r0 = 0
++    as_add(10,0,0, 0,0,0, 0,0,0); // r10 = r0 = 0
++    as_mvi(1); // r0 = 1
++    as_add(9,0,8, 0,0,0, 0,0,0); // r9 = r0 + r8 = 1
++    as_in(15, 0, 0); // r15 = port_in
++    as_mvi(18); // r0 = 18
++    as_sl(15,15,0, 0,0,0, 0,0,0); // r15 = r15 << r0
++    as_mvi(0); // r0 = 0
++    as_mvih(0x0100); // r0 = 0x01000000;
++    as_add(15,15,0, 0,0,0, 0,0,0); // r15 = r15 + r0
++
++    label(L_0);
++
++    as_out(10, 0, 0); // port_out = r10
++    as_add(10,10,9, 0,0,0, 0,0,0); // r10 = r10 + r9
++
++    // loop(wait)
++    as_add(3,15,8, 0,0,0, 0,0,0); // r3 = loop count-1
++    as_mvi(addr_abs(L_7) - addr_abs(L_5));
++    as_add(4,0,8, 0,0,0, 0,0,0); // r4 = the offset of the end of the loop
++    as_mvi(addr_abs(L_6) - addr_abs(L_7) + 1);
++    as_add(5,0,8, 0,0,0, 0,0,0); // r5 = jump offset
++    as_loop();
++
++    label(L_5);
++
++    as_nop(0,0,0,0,0,0,0,0,0);
++    as_nop(0,0,0,0,0,0,0,0,0);
++
++    label(L_6);
++
++    as_nop(0,0,0,0,0,0,0,0,0);
++
++    label(L_7);
++
++    as_ceq(8,8, 0,0, 0,0); // r1 = 0xffffffff
++    as_bc(addr_rel(L_0)); // goto L_0
++    as_nop(0,0,0,0,0,0,0,0,0);
++    as_nop(0,0,0,0,0,0,0,0,0);
++  }
++
+   @Override
+   public void program()
+   {
+     //example1();
+     //example2();
+-    example3();
++    //example3();
++    example4();
+   }
+ }
+diff -Naur sc1_cpu/bemicro_cva9/top.v sc1_cpu_multicore_test/bemicro_cva9/top.v
+--- sc1_cpu/bemicro_cva9/top.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/bemicro_cva9/top.v	2016-12-22 21:32:14.000000000 +0900
+@@ -20,6 +20,7 @@
+    input [0:0]  TACT
+    );
+ 
++  localparam cores = 80;
+   localparam WIDTH_D = 32;
+   localparam WIDTH_REG = 32;
+   localparam DEPTH_I = 8;
+@@ -46,11 +47,51 @@
+       reset <= reset1;
+     end
+ 
+-  wire [WIDTH_REG-1:0] out_data;
+-  assign USER_LED = ~(out_data[7:0]);
++  wire [WIDTH_REG-1:0] out_data[0:cores-1];
++  wire [DEPTH_I-1:0]   rom_addr[0:cores-1];
++  wire [31:0]          rom_data[0:cores-1];
++  generate
++    genvar             i;
++    for (i = 0; i < cores; i = i + 1)
++      begin: inst
++        rom rom_inst
++             (
++              .clk (clk),
++              .addr (rom_addr[i]),
++              .data_out (rom_data[i])
++              );
++
++        sc1_cpu
++          #(
++            .WIDTH_D (WIDTH_D),
++            .WIDTH_REG (WIDTH_REG),
++            .DEPTH_I (DEPTH_I),
++            .DEPTH_D (DEPTH_D)
++            )
++        sc1_cpu_inst
++          (
++           .clk (clk),
++           .reset (reset),
++           .rom_addr (rom_addr[i]),
++           .rom_data (rom_data[i]),
++           .port_in (i),
++           .port_out (out_data[i])
++           );
++      end
++  endgenerate
++
++  reg out_all;
++  integer j;
++  always @*
++    begin
++      out_all = 0;
++      for (j = 0; j < cores; j = j + 1)
++        begin
++          out_all = out_all ^ out_data[j][0:0];
++        end
++    end
+ 
+-  wire [DEPTH_I-1:0]   rom_addr;
+-  wire [31:0]          rom_data;
++  assign USER_LED = {7'b1111111, ~out_all};
+ 
+   simple_pll simple_pll_0
+     (
+@@ -60,28 +101,4 @@
+      .locked (pll_locked)
+      );
+ 
+-  rom rom_0
+-    (
+-     .clk (clk),
+-     .addr (rom_addr),
+-     .data_out (rom_data)
+-     );
+-
+-  sc1_cpu
+-    #(
+-      .WIDTH_D (WIDTH_D),
+-      .WIDTH_REG (WIDTH_REG),
+-      .DEPTH_I (DEPTH_I),
+-      .DEPTH_D (DEPTH_D)
+-      )
+-  sc1_cpu_0
+-    (
+-     .clk (clk),
+-     .reset (reset),
+-     .rom_addr (rom_addr),
+-     .rom_data (rom_data),
+-     .port_in ({WIDTH_REG{1'b0}}),
+-     .port_out (out_data)
+-     );
+-
+ endmodule
+diff -Naur sc1_cpu/de0-cv/top.v sc1_cpu_multicore_test/de0-cv/top.v
+--- sc1_cpu/de0-cv/top.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/de0-cv/top.v	2016-12-22 21:32:14.000000000 +0900
+@@ -26,6 +26,7 @@
+    input        RESET_N
+    );
+ 
++  localparam cores = 10;
+   localparam WIDTH_D = 32;
+   localparam WIDTH_REG = 32;
+   localparam DEPTH_I = 8;
+@@ -41,35 +42,40 @@
+       reset <= reset1;
+     end
+ 
+-  wire [WIDTH_REG-1:0] out_data;
+-  assign LEDR = out_data[9:0];
+-
+-  wire [DEPTH_I-1:0]   rom_addr;
+-  wire [31:0]          rom_data;
+-
+-  rom rom_0
+-    (
+-     .clk (CLOCK_50),
+-     .addr (rom_addr),
+-     .data_out (rom_data)
+-     );
+-
+-  sc1_cpu
+-    #(
+-      .WIDTH_D (WIDTH_D),
+-      .WIDTH_REG (WIDTH_REG),
+-      .DEPTH_I (DEPTH_I),
+-      .DEPTH_D (DEPTH_D)
+-      )
+-  sc1_cpu_0
+-    (
+-     .clk (CLOCK_50),
+-     .reset (reset),
+-     .rom_addr (rom_addr),
+-     .rom_data (rom_data),
+-     .port_in ({WIDTH_REG{1'b0}}),
+-     .port_out (out_data)
+-     );
++  wire [WIDTH_REG-1:0] out_data[0:cores-1];
++  wire [DEPTH_I-1:0]   rom_addr[0:cores-1];
++  wire [31:0]          rom_data[0:cores-1];
++  generate
++    genvar             i;
++    for (i = 0; i < cores; i = i + 1)
++      begin: inst
++        assign LEDR[i] = out_data[i][0:0];
++
++        rom rom_inst
++          (
++           .clk (CLOCK_50),
++           .addr (rom_addr[i]),
++           .data_out (rom_data[i])
++           );
++
++        sc1_cpu
++          #(
++            .WIDTH_D (WIDTH_D),
++            .WIDTH_REG (WIDTH_REG),
++            .DEPTH_I (DEPTH_I),
++            .DEPTH_D (DEPTH_D)
++            )
++        sc1_cpu_inst
++          (
++           .clk (CLOCK_50),
++           .reset (reset),
++           .rom_addr (rom_addr[i]),
++           .rom_data (rom_data[i]),
++           .port_in (i),
++           .port_out (out_data[i])
++           );
++      end
++  endgenerate
+ 
+   // turn off hex leds
+   assign HEX0 = 7'b1111111;
+diff -Naur sc1_cpu/rom.v sc1_cpu_multicore_test/rom.v
+--- sc1_cpu/rom.v	2016-12-22 21:32:14.000000000 +0900
++++ sc1_cpu_multicore_test/rom.v	2016-12-22 21:32:14.000000000 +0900
+@@ -11,45 +11,45 @@
+         8'h00: data_out <= 32'h00000001;
+         8'h01: data_out <= 32'h00000003;
+         8'h02: data_out <= 32'h20000040;
+-        8'h03: data_out <= 32'h00000403;
+-        8'h04: data_out <= 32'h24020040;
+-        8'h05: data_out <= 32'h28820040;
+-        8'h06: data_out <= 32'h0003fc03;
+-        8'h07: data_out <= 32'h0c020040;
+-        8'h08: data_out <= 32'h00001003;
+-        8'h09: data_out <= 32'h10020040;
+-        8'h0a: data_out <= 32'h03fffc03;
+-        8'h0b: data_out <= 32'h14020040;
+-        8'h0c: data_out <= 32'h0000000b;
+-        8'h0d: data_out <= 32'h20820381;
+-        8'h0e: data_out <= 32'h00000001;
+-        8'h0f: data_out <= 32'h24a21240;
+-        8'h10: data_out <= 32'h28a24040;
+-        8'h11: data_out <= 32'h28820040;
+-        8'h12: data_out <= 32'h00040003;
+-        8'h13: data_out <= 32'h2c020040;
+-        8'h14: data_out <= 32'h00b40003;
+-        8'h15: data_out <= 32'h0004c404;
+-        8'h16: data_out <= 32'h0c020040;
+-        8'h17: data_out <= 32'h00000c03;
+-        8'h18: data_out <= 32'h10020040;
+-        8'h19: data_out <= 32'h00000003;
+-        8'h1a: data_out <= 32'h14020040;
+-        8'h1b: data_out <= 32'h0000000b;
+-        8'h1c: data_out <= 32'h00000001;
+-        8'h1d: data_out <= 32'h00000001;
+-        8'h1e: data_out <= 32'h00000001;
+-        8'h1f: data_out <= 32'h20a20381;
+-        8'h20: data_out <= 32'h0080090c;
+-        8'h21: data_out <= 32'h28a24040;
+-        8'h22: data_out <= 32'h00b28006;
+-        8'h23: data_out <= 32'h03ffc408;
+-        8'h24: data_out <= 32'h00000001;
+-        8'h25: data_out <= 32'h00000001;
+-        8'h26: data_out <= 32'h04824040;
+-        8'h27: data_out <= 32'h03ffa808;
+-        8'h28: data_out <= 32'h00000001;
+-        8'h29: data_out <= 32'h00000001;
++        8'h03: data_out <= 32'h28000040;
++        8'h04: data_out <= 32'h00000403;
++        8'h05: data_out <= 32'h24020040;
++        8'h06: data_out <= 32'h3c00004a;
++        8'h07: data_out <= 32'h00004803;
++        8'h08: data_out <= 32'h3cf00047;
++        8'h09: data_out <= 32'h00000003;
++        8'h0a: data_out <= 32'h00040004;
++        8'h0b: data_out <= 32'h3cf00040;
++        8'h0c: data_out <= 32'h00a0000c;
++        8'h0d: data_out <= 32'h28a24040;
++        8'h0e: data_out <= 32'h0cf20040;
++        8'h0f: data_out <= 32'h00000c03;
++        8'h10: data_out <= 32'h10020040;
++        8'h11: data_out <= 32'h00000003;
++        8'h12: data_out <= 32'h14020040;
++        8'h13: data_out <= 32'h0000000b;
++        8'h14: data_out <= 32'h00000001;
++        8'h15: data_out <= 32'h00000001;
++        8'h16: data_out <= 32'h00000001;
++        8'h17: data_out <= 32'h00820005;
++        8'h18: data_out <= 32'h03ffd008;
++        8'h19: data_out <= 32'h00000001;
++        8'h1a: data_out <= 32'h00000001;
++        8'h1b: data_out <= 32'h00000000;
++        8'h1c: data_out <= 32'h00000000;
++        8'h1d: data_out <= 32'h00000000;
++        8'h1e: data_out <= 32'h00000000;
++        8'h1f: data_out <= 32'h00000000;
++        8'h20: data_out <= 32'h00000000;
++        8'h21: data_out <= 32'h00000000;
++        8'h22: data_out <= 32'h00000000;
++        8'h23: data_out <= 32'h00000000;
++        8'h24: data_out <= 32'h00000000;
++        8'h25: data_out <= 32'h00000000;
++        8'h26: data_out <= 32'h00000000;
++        8'h27: data_out <= 32'h00000000;
++        8'h28: data_out <= 32'h00000000;
++        8'h29: data_out <= 32'h00000000;
+         8'h2a: data_out <= 32'h00000000;
+         8'h2b: data_out <= 32'h00000000;
+         8'h2c: data_out <= 32'h00000000;

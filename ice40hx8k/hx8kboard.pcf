@@ -7,3 +7,6 @@ set_io LED[2] C4
 set_io LED[1] B3
 set_io LED[0] C3
 set_io CLK J3
+
+set_io UART_TXD D16
+set_io UART_RXD C16

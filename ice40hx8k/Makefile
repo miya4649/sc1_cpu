@@ -2,7 +2,7 @@ PROJECT = top
 PCF = hx8kboard.pcf
 DEVICE_SHORT = 8k
 DEVICE = hx$(DEVICE_SHORT)
-SOURCE = *.v ../*.v
+SOURCE = top.v ../r2w1_port_ram.v ../rw_port_ram.v ../sc1_cpu.v ../sc1_soc.v ../uart.v
 
 all: $(PROJECT).rpt $(PROJECT).bin
 

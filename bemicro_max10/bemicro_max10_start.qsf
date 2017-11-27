@@ -7,11 +7,26 @@ set_global_assignment -name LAST_QUARTUS_VERSION 15.0.2
 
 set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
 set_global_assignment -name INTERNAL_FLASH_UPDATE_MODE "SINGLE IMAGE WITH ERAM"
+
 set_global_assignment -name VERILOG_FILE bemicro_max10_start.v
-set_global_assignment -name VERILOG_FILE ../rw_port_ram.v
-set_global_assignment -name VERILOG_FILE ../sc1_cpu.v
-set_global_assignment -name VERILOG_FILE ../rom.v
 set_global_assignment -name VERILOG_FILE simple_pll.v
+
+set_global_assignment -name VERILOG_FILE ../rw_port_ram.v
+set_global_assignment -name VERILOG_FILE ../r2w1_port_ram.v
+set_global_assignment -name VERILOG_FILE ../sc1_cpu.v
+set_global_assignment -name VERILOG_FILE ../sc1_soc.v
+set_global_assignment -name VERILOG_FILE ../uart.v
+set_global_assignment -name VERILOG_FILE ../audio_output.v
+set_global_assignment -name VERILOG_FILE ../cdc_fifo.v
+set_global_assignment -name VERILOG_FILE ../cdc_synchronizer.v
+set_global_assignment -name VERILOG_FILE ../chr_bg.v
+set_global_assignment -name VERILOG_FILE ../dual_clk_ram.v
+set_global_assignment -name VERILOG_FILE ../shift_register_vector.v
+set_global_assignment -name VERILOG_FILE ../sprite.v
+set_global_assignment -name VERILOG_FILE ../vga_iface.v
+set_global_assignment -name VERILOG_FILE ../default_code_rom.v
+set_global_assignment -name VERILOG_FILE ../default_data_rom.v
+
 set_global_assignment -name SDC_FILE bemicro_max10_start.sdc
 
 set_location_assignment PIN_F5 -to AIN[0]
