@@ -4,14 +4,13 @@ http://cellspe.matrix.jp/zerofpga/sc1_cpu.html
 
 * ターゲットボードについて
 
-このプロジェクトは以下のFPGA開発ボードに対応しています。
+このプロジェクトは以下のFPGAボードに対応しています。
 Terasic DE0-CV
-Lattice iCE40HX-8K Breakout Board (開発環境: IceStorm)
-BeMicro Max 10
-
-以下のターゲットはアップデートに伴い改修中です。（2017/11/27現在）
 BeMicro CV A9
-MAX10-FB基板（CQ出版社「FPGA電子工作スーパーキット」付録基板）
+以下のボードでは周辺I/OはLEDとUARTのみの対応です。
+BeMicro Max 10
+MAX10-FB基板（FPGA電子工作スーパーキット付録基板）
+iCE40HX-8K(開発環境: IceStorm)
 
 * （BeMicro Max 10の場合）I/O電圧のジャンパ設定について
 
@@ -36,11 +35,6 @@ http://www.alterawiki.com/wiki/BeMicro_CV_A9#Documentation
 MAX10-FB基板ではボードのI/O電圧を3.3Vに設定することを前提にしています。
 書籍の標準設定では3.3Vになっています。
 
-* iCE40HX-8K用のプロジェクトについて
-詳しくは
-sc1_cpu/ice40hx8k/readme_icestorm.txt
-を参照してください。
-
 * マルチコア実装のテストについて
 ** アップデートに伴い改修中です。（2017/11/27現在）
 DE0-CV、BeMicro CV A9向けのマルチコア実装のテストです。詳しくは
@@ -55,27 +49,51 @@ sc1_cpu/patches/readme_patches.txt
 
 * ビルド・実行方法
 
-Quartus II Ver.15.0以上 でプロジェクトファイルを開いて「Start Compilation」、「Programmer」で転送して実行します。
+ここではFPGAのビットストリーム転送までを解説します。
+SC1-CPU用のプログラムを動かすためには後述のUARTの設定が必要です。
+
+●Terasic DE0-CV、BeMicro Max 10、BeMicro CV A9の場合
+Quartus Primeは「AlteraのFPGA開発ツール「Quartus Prime」をUbuntuにインストールする」の方法でインストールしているものとします。
+ターミナルで、
+
+tar xzf sc1_cpu.tar.gz
+
+Quartus Ver.15.0以上 でプロジェクトファイルを開いて「Start Compilation」、「Programmer」で転送して実行します。
+
 プロジェクトファイル:
 Terasic DE0-CV: sc1_cpu/de0-cv/de0-cv_start.qpf
-** 以下のターゲットはアップデートに伴い改修中です。（2017/11/27現在）
 BeMicro Max 10: sc1_cpu/bemicro_max10/bemicro_max10_start.qpf
-BeMicro CV A9:  sc1_cpu/bemicro_cva9/bemicro_cva9_start.qpf
-MAX10-FB基板: sc1_cpu/max10fb/max10fb_start.qpf
+BeMicro CV A9: sc1_cpu/bemicro_cva9/bemicro_cva9_start.qpf
 
-デフォルトでは何もプログラムは何も実行されず、UARTからのプログラム転送待ちの状態となります。
+●MAX10-FB基板 の場合
+MAX10-JB基板は初期状態ではWindows環境でしか仕様できない設定になっているため、まず「FPGA電子工作スーパーキット・サポートサイト」に書かれている方法でアップデートしてLinuxに対応させる必要があります。（もしくは書き込み時のみWindowsを使います。）
+
+Quartus Ver.15.0以上 でプロジェクトファイル sc1_cpu/max10fb/max10fb_start.qpfを開いて「Start Compilation」、「Programmer」で転送して実行します。
+
+●iCE40HX-8K(開発環境: IceStorm)の場合
+オープンソースの開発環境IceStormでコンパイル、転送します。
+詳しくは sc1_cpu/ice40hx8k/readme_icestorm.txt を参照してください。
 
 * Raspberry Pi、PCとの接続
 
 Raspberry Pi、もしくはUSBシリアルケーブルを接続したPCからFPGAにUARTで接続して、プログラムの転送、実行を行えるようにしました。
 
-** Raspberry Pi 3の場合
-以下のように接続します。TXDとRXDはクロス接続となっていることに注意してください。
-音声出力インターフェイスはDE0-CV向けオーディオ・アダプタの製作と同じものです。DE0-CVのGPIOとの接続は単線のジャンパーワイヤで行います。
+このプロジェクトにおける各ボードごとのUARTピン配置
+ボード	UART_TXD	UART_RXD	GND
+Raspberry Pi	8番ピン	10番ピン	6番ピン
+DE0-CV	GPIO-1の2番ピン	GPIO-1の4番ピン	GPIO-1の12番ピン
+Bemicro Max10	GPIO_J4の35番ピン	GPIO_J4の37番ピン	GPIO_J4の33番ピン
+Bemicro CVA9	GPIO_J4の35番ピン	GPIO_J4の37番ピン	GPIO_J4の33番ピン
+Lattice iCE40HX-8K	D16ピン(J2-35番ピン)	C16ピン(J2-37番ピン)	GND(J2-39番ピン)
+MAX10-FB基板	P140(CN2-8番ピン)	P141(CN2-9番ピン)	GND(CN2-20番ピン)
 
-RPi RXD0 (10番ピン) ---- DE0-CV UART_TX (GPIO-1の2番ピン)
-RPi TXD0 (8番ピン) ---- DE0-CV UART_RX (GPIO-1の4番ピン)
-RPi GND (6番ピン) ---- DE0-CV GND (GPIO-1の12番ピン)
+** Raspberry Pi 3の場合
+
+以下のように接続します。TXDとRXDはクロス接続となっていることに注意してください。
+
+RPi RXD0 ---- FPGA UART_TXD
+RPi TXD0 ---- FPGA UART_RXD
+RPi GND ---- FPGA GND
 
 Raspberry PiのUART端子をRaspberry Pi側から外部デバイスに向けて使用できるように設定します。
 ターミナルで、
@@ -102,17 +120,20 @@ export UART_DEVICE=/dev/ttyAMA0
 
 sudo reboot
 
+
 ** PCの場合
+
 PCに接続する場合、USBシリアルケーブルが別途必要です。（FTDI TTL-232R-3V3など。必ずTTL 3.3V 仕様のものを使ってください。電圧が異なるものを使うと最悪FPGAが壊れます。）
-
-これを以下のように接続します。
-PC RXD ---- DE0-CV UART_TX (GPIO-1の2番ピン)
-PC TXD ---- DE0-CV UART_RX (GPIO-1の4番ピン)
-PC GND ---- DE0-CV GND (GPIO-1の12番ピン)
-
 FTDI TTL-232R-3V3 にもVCC 5Vのピンが1本あるので、これを間違えて接続しないよう注意してください。
 
-FTDI TTL-232R-3V3の場合、以下のようにudevのパーミッションを設定します。
+これを以下のように接続します。
+TXDとRXDはクロス接続となっていることに注意してください。
+
+シリアルケーブル RXD ---- FPGA UART_TXD
+シリアルケーブル TXD ---- FPGA UART_RXD
+シリアルケーブル GND ---- FPGA GND
+
+FTDI TTL-232R-3V3の場合、以下のようにudevのパーミッションを設定します。他機種の場合は、idVendor、idProductを読み替えてください。（USBで接続してからlsusbコマンドを打つと調べられます。ID idVendor:idProductの順です。）
 
 sudo rnano /etc/udev/rules.d/99-ft232.rules
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", GROUP="plugdev", MODE="0666"
@@ -123,19 +144,32 @@ rnano ~/.bashrc
 ファイル末尾に追加
 export UART_DEVICE=/dev/ttyUSB0
 
+* その他のI/Oの接続
+
+DE0-CV版では、音声出力インターフェイスを接続します。「DE0-CV向けオーディオ・アダプタの製作」と同じものです。DE0-CVのGPIOとの接続は単線のジャンパーワイヤで行います。
+BeMicro CV A9版では、「映像・音声・コントローラー・インターフェースの製作」の拡張ボードを接続します。
+
+* UART経由でのプログラムの転送、実行
+
+上記のように設定したRaspberry PiまたはPCで、
+
+cd sc1_cpu
+
+make run
+
+これでツールのコンパイル、プログラムのコンパイル、転送、実行が行われます。
+デフォルトではLEDが点滅するサンプル・プログラムが起動するようになっています。
 
 * このCPUでプログラミングする方法
 
-sc1_soc/asm 以下にJava上で動作する簡易アセンブラが入っています。
+sc1_cpu/asm 以下にJava上で動作する簡易アセンブラが入っています。
 実行にはOpenJDK 8.0以上のインストールが必要です。
 AsmLibクラスを継承したクラスを作り、init()で初期化設定、program()にプログラム、data()にデータを記述します。AsmTop.javaも修正します。
-sc1_socディレクトリに移動して make を実行するとプログラム・バイナリが出力されます。
+sc1_cpuディレクトリに移動して make を実行するとプログラム・バイナリが出力されます。
 PCとFPGAをUARTで接続し、 make run を実行するとバイナリがFPGAに転送されて実行されます。
 詳しくはExamples.javaのソースコードを参照してください。
-Lattice iCE40HX-8K, BeMicro Max 10, MAX10-FB基板では、RAMのサイズは1024ワードの設定になっているので、プログラム側でもそれに合わせる必要があります。
-Examples.java の先頭の「ROM_DEPTH」の値を10に変更してからmakeしてください。
 SC1-SoCからのUART出力を使用するプログラムでは、あらかじめ別のターミナル上で、
-cd sc1_soc/tools
+cd sc1_cpu/tools
 ./reciever
 を実行してください。
 
