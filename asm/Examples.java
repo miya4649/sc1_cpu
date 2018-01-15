@@ -282,6 +282,86 @@ public class Examples extends AsmLib
     f_wait_vsync();
   }
 
+  private void example_line()
+  {
+    lib_init_stack();
+    lib_set_im32(SPRITE_X_ADDRESS);
+    lib_wait_reg2addr();
+    lib_set_im(64);
+    as_add(0,SP_REG_MVI,reg_im(0), AM_SET,AM_REG,AM_REG); // sprite.x
+    as_add(1,reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG); // sprite.y = 0
+    as_add(2,reg_im(5),reg_im(0), AM_OFFSET,AM_REG,AM_REG); // sprite.scale = 4
+
+    label("L_example_line_0");
+
+    // clear
+    lib_set_im32(SPRITE_ADDRESS);
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_set_im32(4096);
+    lib_simple_mv(R7, SP_REG_MVI);
+    lib_set_im32(0);
+    lib_simple_mv(R8, SP_REG_MVI);
+    lib_call("f_memory_fill");
+
+    // loop
+    lib_set_im32(1000000);
+    lib_simple_mv(R11, SP_REG_MVI);
+    label("L_example_line_1");
+
+    // set random line data
+    lib_set_im32(addr_abs("d_example_line"));
+    lib_simple_mv(R9, SP_REG_MVI);
+    lib_set_im(63);
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_call("f_nrand");
+    as_add(R9,R6,reg_im(0), AM_SET,AM_REG,AM_REG);
+    as_add(R9,R9,reg_im(1), AM_REG,AM_REG,AM_REG);
+    lib_set_im(63);
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_call("f_nrand");
+    as_add(R9,R6,reg_im(0), AM_SET,AM_REG,AM_REG);
+    as_add(R9,R9,reg_im(1), AM_REG,AM_REG,AM_REG);
+    lib_set_im(63);
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_call("f_nrand");
+    as_add(R9,R6,reg_im(0), AM_SET,AM_REG,AM_REG);
+    as_add(R9,R9,reg_im(1), AM_REG,AM_REG,AM_REG);
+    lib_set_im(63);
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_call("f_nrand");
+    as_add(R9,R6,reg_im(0), AM_SET,AM_REG,AM_REG);
+    as_add(R9,R9,reg_im(1), AM_REG,AM_REG,AM_REG);
+    lib_set_im(255);
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_call("f_nrand");
+    as_add(R9,R6,reg_im(0), AM_SET,AM_REG,AM_REG);
+
+    // line
+    lib_set_im32(addr_abs("d_example_line"));
+    lib_simple_mv(R6, SP_REG_MVI);
+    lib_call("f_line");
+
+    // loop end
+    as_sub(R11,R11,reg_im(1), AM_REG,AM_REG,AM_REG);
+    as_cgta(R11,reg_im(0), AM_REG,AM_REG);
+    lib_bc("L_example_line_1");
+    as_halt();
+    lib_wait_delay_slot();
+    lib_ba("L_example_line_0");
+
+    // link library
+    f_line();
+    f_memory_fill();
+    f_nrand();
+  }
+
+  private void example_line_data()
+  {
+    label("d_example_line");
+    d32x4(0,0,63,63);
+    d32x4(255,0,0,0);
+  }
+
   @Override
   public void init()
   {
@@ -301,6 +381,7 @@ public class Examples extends AsmLib
     //example_vram_fill();
     //example_ascii();
     //example_clear();
+    //example_line();
   }
 
   @Override
@@ -309,5 +390,6 @@ public class Examples extends AsmLib
     datalib_ascii_chr_data();
     d_rand_data();
     example_helloworld_data();
+    example_line_data();
   }
 }

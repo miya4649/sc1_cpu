@@ -422,7 +422,7 @@ public class Synth extends AsmLib
       if (envParams[i].currentLevel > envParams[i].envelopeLevelA)
       {
         envParams[i].currentLevel = envParams[i].envelopeLevelA;
-        envParams[i].state++;
+        envParams[i].state = STATE_DECAY;
       }
       break;
     }
@@ -442,7 +442,7 @@ public class Synth extends AsmLib
       if (envParams[i].currentLevel < envParams[i].envelopeLevelS)
       {
         envParams[i].currentLevel = envParams[i].envelopeLevelS;
-        envParams[i].state++;
+        envParams[i].state = STATE_SUSTAIN;
       }
       break;
     }
@@ -462,7 +462,7 @@ public class Synth extends AsmLib
       if (envParams[i].currentLevel < 0)
       {
         envParams[i].currentLevel = 0;
-        envParams[i].state++;
+        envParams[i].state = STATE_SLEEP;
       }
       break;
     }
@@ -494,9 +494,6 @@ public class Synth extends AsmLib
     // modify: r6 ~ r12, d,a,b_addr
     label("m_calc_wave");
 
-    /*
-      loop(OSCS)
-    */
     // r8:ctrlParam address
     lib_set_im32(addr_struct("d_ctrl_param"));
     lib_simple_mv(R8, SP_REG_MVI);
@@ -509,6 +506,10 @@ public class Synth extends AsmLib
     as_add(ctrlParam.offset("mixR"),reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     as_add(ctrlParam.offset("mixRevL"),reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     as_add(ctrlParam.offset("mixRevR"),reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+
+    /*
+      loop(OSCS)
+    */
     // r7 = ctrlParam.OSCS - 1;
     as_sub(R7,ctrlParam.offset("OSCS"),reg_im(1), AM_REG,AM_OFFSET,AM_REG);
     // r12 = ctrlParam.sizeOfOscParam;
@@ -521,39 +522,18 @@ public class Synth extends AsmLib
     as_nop(R6,R6,R8, AM_SET,AM_SET,AM_SET);
 
     /*
-    oscParam.level = envParam[oscParam.envPatch].currentLevel;
-     */
-    as_mul(R9,oscParam.offset("envPatch"),ctrlParam.offset("sizeOfEnvParam"), AM_REG,AM_OFFSET,AM_OFFSET);
-    lib_set_im32(addr_struct("d_env_param"));
-    as_add(R9,R9,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
-    lib_wait_reg2addr();
-    // d:oscParam a:patch_envParam b:ctrlParam
-    as_nop(R6,R9,R8, AM_SET,AM_SET,AM_SET);
-    as_add(oscParam.offset("level"),envParam.offset("currentLevel"),reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
-
-    /*
-    oscParam[i].mod0 = oscParam[oscParam[i].modPatch0].outData;
-    oscParam[i].mod1 = oscParam[oscParam[i].modPatch1].outData;
+    oscParam.level = *envPatchAddr;
+    oscParam.mod0 = *modPatch0Addr;
+    oscParam.mod1 = *modPatch1Addr;
     */
-        /*
-        outDataParamAddr0 = (addr_struct("d_osc_param") + params[i].modPatch0 * sizeof(oscParam)).offset("outData");
-        set outDataParamAddr0;
-        params[i].mod0 = outDataParamAddr0.outData
-        */
-
-    // d:oscParam a:oscParam b:ctrlParam
-    as_nop(R6,R6,R8, AM_SET,AM_SET,AM_SET);
-    as_mul(R9,oscParam.offset("modPatch0"),ctrlParam.offset("sizeOfOscParam"), AM_REG,AM_OFFSET,AM_OFFSET);
-    as_mul(R10,oscParam.offset("modPatch1"),ctrlParam.offset("sizeOfOscParam"), AM_REG,AM_OFFSET,AM_OFFSET);
-    lib_set_im32(addr_struct("d_osc_param"));
-    as_add(R9,R9,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
-    as_add(R10,R10,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
-    lib_wait_reg2addr();
-    // d:oscParam a:patch_oscParam b:ctrlParam
-    as_nop(R6,R9,R8, AM_SET,AM_SET,AM_SET);
-    as_add(oscParam.offset("mod0"),oscParam.offset("outData"),reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
-    as_nop(R6,R10,R8, AM_SET,AM_SET,AM_SET);
-    as_add(oscParam.offset("mod1"),oscParam.offset("outData"),reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(R9,oscParam.offset("modPatch0Addr"),reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    as_add(R10,oscParam.offset("modPatch1Addr"),reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    as_add(R11,oscParam.offset("envPatchAddr"),reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    // lib_wait_reg2addr();
+    as_add(oscParam.offset("mod0"),R9,reg_im(0), AM_OFFSET,AM_SET,AM_REG);
+    as_add(oscParam.offset("mod1"),R10,reg_im(0), AM_OFFSET,AM_SET,AM_REG);
+    as_add(oscParam.offset("level"),R11,reg_im(0), AM_OFFSET,AM_SET,AM_REG);
+    // lib_wait_dependency();
 
     /*
     waveAddr = (params[i].count +
@@ -876,6 +856,41 @@ public class Synth extends AsmLib
     as_add(seqParam.offset("seqDataEnd"),R6,SP_REG_MVI, AM_OFFSET,AM_REG,AM_REG);
     // seqParam.beat = seqParam.seqDataStart
     as_add(seqParam.offset("beat"),seqParam.offset("seqDataStart"),reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+
+    // set patch address
+    // d,a_addr = oscParam; b_addr = ctrlParam;
+    lib_set_im32(addr_struct("d_osc_param"));
+    lib_simple_mv(R7, SP_REG_MVI);
+    lib_wait_reg2addr();
+    as_nop(R7,R7,R7, AM_SET,AM_SET,AM_SET);
+    lib_set_im32(addr_struct("d_ctrl_param"));
+    lib_wait_reg2addr();
+    as_nop(0,0,SP_REG_MVI, AM_REG,AM_REG,AM_SET);
+    lib_loop_start("loop_f_synth_init_2", OSCS - 1, LOOP_MODE_IM);
+    // oscParam.envPatchAddr = oscParam.envPatch * ctrlParam.sizeOfEnvParam + addr_struct("d_env_param") + envParam.offset("currentLevel");
+    as_mul(R6,oscParam.offset("envPatch"),ctrlParam.offset("sizeOfEnvParam"), AM_REG,AM_OFFSET,AM_OFFSET);
+    lib_set_im32(addr_struct("d_env_param"));
+    as_add(R6,R6,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    lib_set_im32(envParam.offset("currentLevel"));
+    as_add(oscParam.offset("envPatchAddr"),R6,SP_REG_MVI, AM_OFFSET,AM_REG,AM_REG);
+    // oscParam.modPatch0Addr = oscParam.modPatch0 * ctrlParam.sizeOfOscParam + addr_struct("d_osc_param") + oscParam.offset("outData");
+    as_mul(R6,oscParam.offset("modPatch0"),ctrlParam.offset("sizeOfOscParam"), AM_REG,AM_OFFSET,AM_OFFSET);
+    lib_set_im32(addr_struct("d_osc_param"));
+    as_add(R6,R6,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    lib_set_im32(oscParam.offset("outData"));
+    as_add(oscParam.offset("modPatch0Addr"),R6,SP_REG_MVI, AM_OFFSET,AM_REG,AM_REG);
+    // oscParam.modPatch1Addr = oscParam.modPatch1 * ctrlParam.sizeOfOscParam + addr_struct("d_osc_param") + oscParam.offset("outData");
+    as_mul(R6,oscParam.offset("modPatch1"),ctrlParam.offset("sizeOfOscParam"), AM_REG,AM_OFFSET,AM_OFFSET);
+    lib_set_im32(addr_struct("d_osc_param"));
+    as_add(R6,R6,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    lib_set_im32(oscParam.offset("outData"));
+    as_add(oscParam.offset("modPatch1Addr"),R6,SP_REG_MVI, AM_OFFSET,AM_REG,AM_REG);
+    // oscParam++;
+    as_add(R7,R7,ctrlParam.offset("sizeOfOscParam"), AM_REG,AM_REG,AM_OFFSET);
+    lib_wait_reg2addr();
+    as_nop(R7,R7,0, AM_SET,AM_SET,AM_REG);
+    lib_loop_end("loop_f_synth_init_2");
+
     lib_pop_regs(14, 12);
     lib_pop(SP_REG_LINK);
     lib_return();
@@ -1167,6 +1182,9 @@ public class Synth extends AsmLib
     oscParam.add("levelL", DEFAULT_VOLUME);
     oscParam.add("levelR", DEFAULT_VOLUME);
     oscParam.add("levelRev", (int)(FIXED_SCALE * 0.7));
+    oscParam.add("envPatchAddr", 0);
+    oscParam.add("modPatch0Addr", 0);
+    oscParam.add("modPatch1Addr", 0);
 
     ctrlParam.clear();
     ctrlParam.add("OSCS", OSCS);

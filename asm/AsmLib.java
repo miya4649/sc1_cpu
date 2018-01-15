@@ -80,6 +80,8 @@ public class AsmLib extends Asm
   public static final int LOOP_MODE_REG = 0;
   public static final int LOOP_MODE_IM = 1;
 
+  public static final int SPRITE_LINE_VOFFSET = 64;
+
   public int stackAddress = ((1 << DEPTH_D) - 1);
 
   // set default stack address
@@ -89,6 +91,16 @@ public class AsmLib extends Asm
   }
 
   // lib_* --------------------------------
+
+  // reg = ABS(reg)
+  // (reg != SP_REG_MVI)
+  // modify: reg, SP_REG_MVI
+  public void lib_abs(int reg)
+  {
+    as_sub(SP_REG_MVI,reg_im(0),reg, AM_REG,AM_REG,AM_REG);
+    as_cgta(reg_im(0),reg, AM_REG,AM_REG);
+    as_mv(reg,SP_REG_MVI, AM_REG,AM_REG);
+  }
 
   // allocate memory in stack
   // input r6:size
@@ -385,6 +397,15 @@ public class AsmLib extends Asm
     lib_wait_delay_slot();
   }
 
+  // swap register
+  // modify: SP_REG_MVI
+  public void lib_swap(int reg_a, int reg_b)
+  {
+    lib_simple_mv(SP_REG_MVI, reg_a);
+    lib_simple_mv(reg_a, reg_b);
+    lib_simple_mv(reg_b, SP_REG_MVI);
+  }
+
   // wait: delay_slot
   public void lib_wait_delay_slot()
   {
@@ -515,10 +536,188 @@ public class AsmLib extends Asm
     lib_return();
   }
 
+  public void f_line()
+  {
+    // line(x0, y0, x1, y1, color);
+    // input: r6 (data address)
+    // modify: r6 ~ r10, d_addr, a_addr
+    // using loop instruction
+    // x0: *(R6 + 0) y0: *(R6 + 1) x1: *(R6 + 2) y1: *(R6 + 3) color: *(R6 + 4)
+
+    label("f_line");
+    /*
+    if (abs(y1 - y0) > abs(x1 - x0))
+    {
+      swap(x0, y0);
+      swap(x1, y1);
+      ofx = width;
+      ofy = 1;
+    }
+    else
+    {
+      ofx = 1;
+      ofy = width;
+    }
+    dx = abs(x1 - x0);
+    if (dx == 0) return;
+    if (x1 > x0)
+    {
+      ix = ofx;
+    }
+    else
+    {
+      ix = -ofx;
+    }
+    if (y1 > y0)
+    {
+      iy = ofy;
+    }
+    else
+    {
+      iy = -ofy;
+    }
+    addr = SPRITE_ADDRESS + x0 * ofx + y0 * ofy;
+    dy = abs(y1 - y0);
+    er = dx >> 1;
+    for (i = 0; i < dx; i++)
+    {
+      er -= dy;
+      vram[addr] = col;
+      addr += ix;
+      if (0 > er)
+      {
+        addr += iy;
+        er += dx;
+      }
+    }
+     */
+    // x0:sp[0] y0:sp[1] x1:sp[2] y1:sp[3] color:sp[4]
+    // ofx:sp[5] ofy:sp[6]
+    int Ix0, Iy0, Ix1, Iy1, Icolor;
+    int Sx0, Sy0, Sx1, Sy1, Scolor, Sdx, Sdy, Sofx, Sofy, Six, Siy, Sx, Sy;
+    int Rer, Raddr;
+    int Rt1, Rt2, Rt3;
+    Ix0 = 0;
+    Iy0 = 1;
+    Ix1 = 2;
+    Iy1 = 3;
+    Icolor = 4;
+    Sx0 = 0;
+    Sy0 = 1;
+    Sx1 = 2;
+    Sy1 = 3;
+    Scolor = 4;
+    Sdx = 5;
+    Sdy = 6;
+    Sofx = 7;
+    Sofy = 8;
+    Six = 9;
+    Siy = 10;
+    Sx = 11;
+    Sy = 12;
+    Rt1 = R7;
+    Raddr = R7;
+    Rt2 = R8;
+    Rt3 = R9;
+    Rer = R10;
+    lib_alloca(16);
+    as_nop(R6,R6,R6, AM_SET,AM_SET,AM_SET);
+    // y1 - y0
+    as_sub(Rt1,Iy1,Iy0, AM_REG,AM_OFFSET,AM_OFFSET);
+    // abs(y1 - y0)
+    lib_abs(Rt1);
+    // x1 - x0
+    as_sub(Rt2,Ix1,Ix0, AM_REG,AM_OFFSET,AM_OFFSET);
+    // abs(x1 - x0)
+    lib_abs(Rt2);
+    // if (abs(y1 - y0) > abs(x1 - x0))
+    as_cgta(Rt1,Rt2, AM_REG,AM_REG);
+    // d_addr = SP_REG_STACK_POINTER
+    as_nop(SP_REG_STACK_POINTER,0,0, AM_SET,AM_REG,AM_REG);
+    // sp[4] = *(R6 + 4)
+    as_add(Scolor,Icolor,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    lib_bc("L_f_line_1");
+    as_add(Sx0,Ix0,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sy0,Iy0,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sx1,Ix1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sy1,Iy1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sofx,reg_im(1),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    lib_set_im(SPRITE_LINE_VOFFSET);
+    as_add(Sofy,SP_REG_MVI,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    lib_ba("L_f_line_2");
+    label("L_f_line_1");
+    as_add(Sx0,Iy0,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sy0,Ix0,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sx1,Iy1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sy1,Ix1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
+    as_add(Sofy,reg_im(1),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    lib_set_im(SPRITE_LINE_VOFFSET);
+    as_add(Sofx,SP_REG_MVI,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    label("L_f_line_2");
+    // d_addr,a_addr,b_addr = SP_REG_STACK_POINTER
+    as_nop(SP_REG_STACK_POINTER,SP_REG_STACK_POINTER,SP_REG_STACK_POINTER, AM_SET,AM_SET,AM_SET);
+    // dx = abs(x1 - x0);
+    as_sub(Rt1,Sx1,Sx0, AM_REG,AM_OFFSET,AM_OFFSET);
+    lib_abs(Rt1);
+    as_add(Sdx,Rt1,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    // if (dx == 0) return;
+    as_ceq(Rt1,reg_im(0), AM_REG,AM_REG);
+    lib_bc("L_f_line_end");
+    // ix = -ofx
+    as_sub(Six,reg_im(0),Sofx, AM_OFFSET,AM_REG,AM_OFFSET);
+    // Rt1 = ofx
+    as_add(Rt1,Sofx,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    // if (x1 > x0) ix = Rt1
+    as_cgta(Sx1,Sx0, AM_OFFSET,AM_OFFSET);
+    as_mv(Six,Rt1, AM_OFFSET,AM_REG);
+    // iy = -ofy
+    as_sub(Siy,reg_im(0),Sofy, AM_OFFSET,AM_REG,AM_OFFSET);
+    // Rt1 = ofy
+    as_add(Rt1,Sofy,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    // if (y1 > y0) iy = Rt1
+    as_cgta(Sy1,Sy0, AM_OFFSET,AM_OFFSET);
+    as_mv(Siy,Rt1, AM_OFFSET,AM_REG);
+    // addr = SPRITE_ADDRESS + x0 * ofx + y0 * ofy;
+    as_mul(Raddr,Sx0,Sofx, AM_REG,AM_OFFSET,AM_OFFSET);
+    as_mul(Rt2,Sy0,Sofy, AM_REG,AM_OFFSET,AM_OFFSET);
+    as_add(Raddr,Raddr,Rt2, AM_REG,AM_REG,AM_REG);
+    lib_set_im32(SPRITE_ADDRESS);
+    as_add(Raddr,Raddr,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    // dy = abs(y1 - y0);
+    as_sub(Rt2,Sy1,Sy0, AM_REG,AM_OFFSET,AM_OFFSET);
+    lib_abs(Rt2);
+    as_add(Sdy,Rt2,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    // er = dx >> 1;
+    as_sr(Rer,Sdx,reg_im(1), AM_REG,AM_OFFSET,AM_REG);
+    // Rt2 = dx - 1
+    as_sub(Rt2,Sdx,reg_im(1), AM_REG,AM_OFFSET,AM_REG);
+    // for (i = 0; i < dx; i++)
+    lib_loop_start("Loop_f_line_1", Rt2, LOOP_MODE_REG);
+    // er -= dy;
+    as_sub(Rer,Rer,Sdy, AM_REG,AM_REG,AM_OFFSET);
+    // vram[addr] = col;
+    as_add(Raddr,Scolor,reg_im(0), AM_SET,AM_OFFSET,AM_REG);
+    // addr += ix;
+    as_add(Raddr,Raddr,Six, AM_REG,AM_REG,AM_OFFSET);
+    // Rt2 = addr + iy
+    as_add(Rt2,Raddr,Siy, AM_REG,AM_REG,AM_OFFSET);
+    // Rt3 = er + dx
+    as_add(Rt3,Rer,Sdx, AM_REG,AM_REG,AM_OFFSET);
+    // if (0 > er) {addr = Rt2; er = Rt3}
+    as_cgta(reg_im(0),Rer, AM_REG,AM_REG);
+    as_mv(Raddr,Rt2, AM_REG,AM_REG);
+    as_mv(Rer,Rt3, AM_REG,AM_REG);
+    lib_loop_end("Loop_f_line_1");
+    label("L_f_line_end");
+    lib_alloca_free(16);
+    lib_return();
+  }
+
   // memory fill
   // input: r6:start_address r7:size r8:fill_data
   // output: none
   // modify: r7,r9,d_addr
+  // using loop instruction
   public void f_memory_fill()
   {
     label("f_memory_fill");
