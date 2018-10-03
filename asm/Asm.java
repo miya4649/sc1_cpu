@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,8 @@ public class Asm
   private static final int W_DATA = 1;
 
   private int romDepth = 8;
+  private int codeROMDepth = 8;
+  private int dataROMDepth = 8;
   private int pAddress;
   private int pass;
   private String fileName = "default";
@@ -65,10 +67,12 @@ public class Asm
       if (mode == W_CODE)
       {
         name = "code";
+        romDepth = codeROMDepth;
       }
       else
       {
         name = "data";
+        romDepth = dataROMDepth;
       }
       String hdlName = fileName + "_" + name + "_rom";
       File file = new File("../" + hdlName + ".v");
@@ -105,6 +109,80 @@ public class Asm
       writer.printf(
         "      endcase\n" +
         "    end\n" +
+        "endmodule\n");
+      writer.close();
+    }
+    catch (Exception e)
+    {
+    }
+  }
+
+  public void write_mem(int mode)
+  {
+    try
+    {
+      String name;
+      if (mode == W_CODE)
+      {
+        name = "code";
+        romDepth = codeROMDepth;
+      }
+      else
+      {
+        name = "data";
+        romDepth = dataROMDepth;
+      }
+      String hdlName = fileName + "_" + name + "_mem";
+      File file = new File("../" + hdlName + ".v");
+      file.createNewFile();
+      PrintWriter writer = new PrintWriter(file);
+      writer.printf(
+        "module %s\n", hdlName);
+      writer.printf(
+        "  #(\n" +
+        "    parameter DATA_WIDTH=32,\n");
+      writer.printf(
+        "    parameter ADDR_WIDTH=%d\n", romDepth);
+      writer.printf(
+        "    )\n" +
+        "  (\n" +
+        "   input                         clk,\n" +
+        "   input [(ADDR_WIDTH-1):0]      addr_r,\n" +
+        "   input [(ADDR_WIDTH-1):0]      addr_w,\n" +
+        "   input [(DATA_WIDTH-1):0]      data_in,\n" +
+        "   input                         we,\n" +
+        "   output reg [(DATA_WIDTH-1):0] data_out\n" +
+        "   );\n" +
+        "\n" +
+        "  reg [DATA_WIDTH-1:0]           ram [0:(1 << ADDR_WIDTH)-1];\n" +
+        "\n" +
+        "  always @(posedge clk)\n" +
+        "    begin\n" +
+        "      data_out <= ram[addr_r];\n" +
+        "      if (we)\n" +
+        "        begin\n" +
+        "          ram[addr_w] <= data_in;\n" +
+        "        end\n" +
+        "    end\n" +
+        "\n" +
+        "  initial\n" +
+        "    begin\n");
+      for (int i = 0; i < (1 << romDepth); i++)
+      {
+        int d;
+        if (i < data.size())
+        {
+          d = data.get(i);
+        }
+        else
+        {
+          d = 0;
+        }
+        writer.printf("      ram[32'h%08x] = 32'h%08x;\n", i, d);
+      }
+      writer.printf(
+        "    end\n" +
+        "\n" +
         "endmodule\n");
       writer.close();
     }
@@ -192,10 +270,7 @@ public class Asm
   // Print Error
   public void print_error(String err)
   {
-    if (pass == 1)
-    {
-      System.out.printf("Error: %s Address: %d\n", err, pAddress);
-    }
+    System.out.printf("Error: %s Address: %d\n", err, pAddress);
     System.exit(1);
   }
 
@@ -212,6 +287,16 @@ public class Asm
   public void set_rom_depth(int depth)
   {
     romDepth = depth;
+    codeROMDepth = depth;
+    dataROMDepth = depth;
+  }
+
+  // set rom depth
+  public void set_rom_depth(int code_depth, int data_depth)
+  {
+    romDepth = code_depth;
+    codeROMDepth = code_depth;
+    dataROMDepth = data_depth;
   }
 
   // set filename
@@ -307,12 +392,14 @@ public class Asm
     write_verilog(W_CODE);
     write_binary(W_CODE);
     write_testbench(W_CODE);
+    write_mem(W_CODE);
     pAddress = 0;
     data.clear();
     data();
     write_verilog(W_DATA);
     write_binary(W_DATA);
     write_testbench(W_DATA);
+    write_mem(W_DATA);
   }
 
   private void store_inst(int inst)

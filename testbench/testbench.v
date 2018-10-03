@@ -18,16 +18,17 @@
 
 module testbench;
 
-  localparam STEP = 56; // 56 ns: 18MHz
-  localparam STEPA = 20; // 20 ns: 50MHz
+  localparam STEP  = 20; // 20 ns: 50MHz
+  localparam STEPA = 56; // 56 ns: 18MHz
   localparam STEPV = 40; // 40 ns: 25MHz
-  localparam TICKS = 100000;
+  localparam TICKS = 500000;
 
   localparam WIDTH_D = 32;
   localparam DEPTH_D = 12;
   localparam DEPTH_I = 12;
+  localparam DEPTH_V = 17;
   localparam DEPTH_REG = 4;
-  localparam DEPTH_IO_REG = 4;
+  localparam DEPTH_IO_REG = 5;
   localparam CLK_HZ  = 50000000;
   localparam SCLK_HZ = 25000000;
   localparam WAIT = (CLK_HZ / SCLK_HZ - 1);
@@ -52,6 +53,10 @@ module testbench;
   wire       audio_r;
   wire       audio_l;
 `endif
+`ifdef USE_MINI_AUDIO
+  wire       audio_r;
+  wire       audio_l;
+`endif
 `ifdef USE_VGA
   reg        clkv;
   reg        resetv;
@@ -60,6 +65,15 @@ module testbench;
   wire [3:0] vga_r;
   wire [3:0] vga_g;
   wire [3:0] vga_b;
+`endif
+`ifdef USE_MINI_VGA
+  wire       vga_hs;
+  wire       vga_vs;
+  wire [`MINI_VGA_BPP-1:0] vga_color_out;
+`endif
+`ifdef USE_I2C
+  wire       i2c_sda;
+  wire       i2c_scl;
 `endif
 
     initial
@@ -78,6 +92,7 @@ module testbench;
         for (i = 0; i < (1 << DEPTH_IO_REG); i = i + 1)
           begin
             $dumpvars(0, testbench.sc1_soc_0.io_reg_w[i]);
+            $dumpvars(0, testbench.sc1_soc_0.io_reg_r[i]);
           end
         $monitor("time: %d reset: %d led: %d", $time, reset, led);
       end
@@ -114,7 +129,8 @@ module testbench;
       .UART_COUNTER_WIDTH (COUNTER_WIDTH),
       .WIDTH_D (WIDTH_D),
       .DEPTH_I (DEPTH_I),
-      .DEPTH_D (DEPTH_D)
+      .DEPTH_D (DEPTH_D),
+      .DEPTH_V (DEPTH_V)
       )
   sc1_soc_0
     (
@@ -130,6 +146,10 @@ module testbench;
      .audio_r (audio_r),
      .audio_l (audio_l),
 `endif
+`ifdef USE_MINI_AUDIO
+     .audio_r (audio_r),
+     .audio_l (audio_l),
+`endif
 `ifdef USE_VGA
      .clkv (clkv),
      .resetv (resetv),
@@ -138,6 +158,15 @@ module testbench;
      .vga_r (vga_r),
      .vga_g (vga_g),
      .vga_b (vga_b),
+`endif
+`ifdef USE_MINI_VGA
+     .vga_hs (vga_hs),
+     .vga_vs (vga_vs),
+     .vga_color_out (vga_color_out),
+`endif
+`ifdef USE_I2C
+     .i2c_sda (i2c_sda),
+     .i2c_scl (i2c_scl),
 `endif
      .led (led)
      );
@@ -190,7 +219,7 @@ module testbench;
       uart_word(32'h00004001, 32'h00000004);
       uart_word(32'h00004002, 32'h20080040);
       uart_word(32'h00004003, 32'h1a080040);
-      uart_word(32'h00004004, 32'h00000003);
+      uart_word(32'h00004004, 32'h00130003);
       uart_word(32'h00004005, 32'h1c080040);
       uart_word(32'h00004006, 32'h2061c846);
       uart_word(32'h00004007, 32'h18684040);
@@ -200,9 +229,11 @@ module testbench;
       uart_word(32'h0000400b, 32'h00000001);
       uart_word(32'h0000400c, 32'h00000001);
       uart_word(32'h0000400d, 32'h00000001);
+
       // program end here --------
 
       // data start here --------
+      uart_word(32'h00000000, 32'h00000000);
       // data end here --------
 
       uart_word(32'h00005002, 32'h00000001); // cpu master
@@ -222,7 +253,7 @@ module testbench;
       clka = 1'b1;
       forever
         begin
-          #(STEPA / 4) clka = ~clka;
+          #(STEPA / 2) clka = ~clka;
         end
     end
 
@@ -244,7 +275,7 @@ module testbench;
       clkv = 1'b1;
       forever
         begin
-          #(STEP / 4) clkv = ~clkv;
+          #(STEPV / 2) clkv = ~clkv;
         end
     end
 

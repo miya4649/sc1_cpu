@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017, miya
+  Copyright (c) 2017-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -50,17 +50,19 @@ public class AsmLib extends Asm
   public static final int AM_OFFSET = 3;
 
   public static final int MEM_D_ADDRESS = 0x00000000;
-  public static final int SPRITE_ADDRESS = 0x00001000;
   public static final int IOREG_R_ADDRESS = 0x00002000;
   public static final int IOREG_W_ADDRESS = 0x00003000;
   public static final int CHR_CHR_ADDRESS = 0x00006000;
   public static final int CHR_BIT_ADDRESS = 0x00007000;
+  public static final int SPRITE_ADDRESS = 0x00008000;
   public static final int MEM_S_ADDRESS = 0x00010000;
 
   public static final int UART_BUSY_ADDRESS = 0x00002000;
   public static final int VSYNC_ADDRESS = 0x00002001;
   public static final int VCOUNT_ADDRESS = 0x00002002;
   public static final int AUDIO_FULL_ADDRESS = 0x00002003;
+  public static final int TIMER_COUNT_ADDRESS = 0x00002004;
+  public static final int I2C_READ_ADDRESS = 0x00002005;
   public static final int UART_TX_ADDRESS = 0x00003000;
   public static final int SPRITE_X_ADDRESS = 0x00003001;
   public static final int SPRITE_Y_ADDRESS = 0x00003002;
@@ -76,11 +78,22 @@ public class AsmLib extends Asm
   public static final int CHR_PALETTE1_ADDRESS = 0x0000300c;
   public static final int CHR_PALETTE2_ADDRESS = 0x0000300d;
   public static final int CHR_PALETTE3_ADDRESS = 0x0000300e;
+  public static final int TIMER_RESET_ADDRESS = 0x0000300f;
+  public static final int I2C_WRITE_ADDRESS = 0x00003010;
+  /*
+    i2c_command: *I2C_WRITE_ADDRESS[11:10]
+    i2c_start: *I2C_WRITE_ADDRESS[9]
+    i2c_r_ack: *I2C_WRITE_ADDRESS[8]
+    i2c_data_w: *I2C_WRITE_ADDRESS[7:0]
 
+    i2c_busy: *I2C_READ_ADDRESS[9]
+    i2c_w_ack: *I2C_READ_ADDRESS[8]
+    i2c_data_r: *I2C_READ_ADDRESS[7:0]
+  */
   public static final int LOOP_MODE_REG = 0;
   public static final int LOOP_MODE_IM = 1;
 
-  public static final int SPRITE_LINE_VOFFSET = 64;
+  public int spriteLineVoffsetInBits = 6;
 
   public int stackAddress = ((1 << DEPTH_D) - 1);
 
@@ -193,18 +206,30 @@ public class AsmLib extends Asm
     as_add(SP_REG_STACK_POINTER,SP_REG_MVI,reg_im(0), AM_REG,AM_REG,AM_REG);
   }
 
-  // convert int16 to int32
-  public void lib_int16_to_32(int reg)
+  // convert int8 to int32 (char to int)
+  public void lib_int8_to_32(int reg)
   {
-    // if (reg > 0x00007fff) reg |= 0xffff0000;
-    as_mvi(0x7fff);
-    as_cgt(reg,SP_REG_MVI, AM_REG,AM_REG);
-    as_add(SP_REG_MVI,reg,reg_im(0), AM_REG,AM_REG,AM_REG);
-    as_mvih(0xffff);
-    as_mv(reg,SP_REG_MVI, AM_REG,AM_REG);
+    as_mvi(24);
+    as_sl(reg,reg,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    as_sra(reg,reg,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
   }
 
-  // convert int32 to int16
+  // convert int32 to int8 (int to char)
+  public void lib_int32_to_8(int reg)
+  {
+    as_mvi(0xff);
+    as_and(reg,reg,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+  }
+
+  // convert int16 to int32 (short to int)
+  public void lib_int16_to_32(int reg)
+  {
+    as_mvi(16);
+    as_sl(reg,reg,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    as_sra(reg,reg,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+  }
+
+  // convert int32 to int16 (int to short)
   public void lib_int32_to_16(int reg)
   {
     as_mvi(0xffff);
@@ -357,6 +382,13 @@ public class AsmLib extends Asm
     as_add(reg,reg_im(im0),reg_im(im1), AM_REG,AM_REG,AM_REG);
   }
 
+  // set immidiate value to register (32bit value)
+  public void lib_set32(int reg, long value)
+  {
+    lib_set_im32(value);
+    lib_simple_mv(reg, SP_REG_MVI);
+  }
+
   // set SP_REG_CP(compare register) true/false
   public void lib_set_compare_reg(boolean b)
   {
@@ -370,13 +402,13 @@ public class AsmLib extends Asm
     }
   }
 
-  // r[reg] = value (16bit)
+  // reg[SP_REG_MVI] = value (16bit)
   public void lib_set_im(int value)
   {
     as_mvi((int)value);
   }
 
-  // r[reg] = value (32bit)
+  // reg[SP_REG_MVI] = value (32bit)
   public void lib_set_im32(long value)
   {
     as_mvi((int)value);
@@ -389,10 +421,9 @@ public class AsmLib extends Asm
     as_add(reg_d,reg_a,reg_im(0), AM_REG,AM_REG,AM_REG); // r[reg_d] = r[reg_a]
   }
 
-  // show register and stop
-  public void lib_stop(int reg)
+  // stop
+  public void lib_stop()
   {
-    lib_reg2led(reg);
     as_halt();
     lib_wait_delay_slot();
   }
@@ -536,6 +567,219 @@ public class AsmLib extends Asm
     lib_return();
   }
 
+  public void f_i2c_command()
+  {
+    // input: r6: command_data
+    // output: none
+    // modify: r6 ~ r7, d_addr
+    int R_i2c_data_in = R6;
+    int R_i2c_write_addr = R7;
+    label("f_i2c_command");
+    lib_set_im32(I2C_WRITE_ADDRESS);
+    lib_simple_mv(R_i2c_write_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    // set start bit
+    lib_set_im(0x200);
+    as_or(R_i2c_write_addr,R_i2c_data_in,SP_REG_MVI, AM_SET,AM_REG,AM_REG);
+    // reset start bit
+    lib_set_im(0xfdff);
+    as_and(R_i2c_write_addr,R_i2c_data_in,SP_REG_MVI, AM_SET,AM_REG,AM_REG);
+    lib_return();
+  }
+
+  public void f_i2c_read()
+  {
+    // input: r6:dev_addr r7:reg_addr
+    // output: r8:data
+    // modify: r6 ~ r8, d_addr, a_addr
+    int R_dev_addr = R6;
+    int R_reg_addr = R7;
+    int R_out_data = R8;
+    label("f_i2c_read");
+    lib_push(SP_REG_LINK);
+    // save R6~R7
+    lib_alloca(2);
+    lib_wait_reg2addr();
+    as_nop(SP_REG_STACK_POINTER,SP_REG_STACK_POINTER,0, AM_SET,AM_SET,AM_REG);
+    as_add(1,R6,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    as_add(2,R7,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    // i2c_start
+    m_i2c_start();
+    lib_call("f_i2c_wait_command");
+    // i2c_tx(dev_addr << 1)
+    as_nop(0,SP_REG_STACK_POINTER,0, AM_REG,AM_SET,AM_REG);
+    as_sl(R6,1,reg_im(1), AM_REG,AM_OFFSET,AM_REG);
+    m_i2c_tx();
+    lib_call("f_i2c_wait_command");
+    // i2c_tx(reg)
+    as_nop(0,SP_REG_STACK_POINTER,0, AM_REG,AM_SET,AM_REG);
+    as_add(R6,2,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    m_i2c_tx();
+    lib_call("f_i2c_wait_command");
+    // i2c_start (repeated)
+    m_i2c_start();
+    lib_call("f_i2c_wait_command");
+    // i2c_tx((dev_addr << 1) | 1)
+    as_nop(0,SP_REG_STACK_POINTER,0, AM_REG,AM_SET,AM_REG);
+    as_sl(R6,1,reg_im(1), AM_REG,AM_OFFSET,AM_REG);
+    as_or(R6,R6,reg_im(1), AM_REG,AM_REG,AM_REG);
+    m_i2c_tx();
+    lib_call("f_i2c_wait_command");
+    // i2c_rx(nack:1)
+    as_add(R6,reg_im(1),reg_im(0), AM_REG,AM_REG,AM_REG);
+    m_i2c_rx();
+    lib_call("f_i2c_wait_command");
+    // read rx data
+    lib_call("f_i2c_status");
+    lib_simple_mv(R_out_data, R6);
+    lib_set_im(0xff);
+    as_and(R_out_data,R_out_data,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    // i2c_stop
+    m_i2c_stop();
+    lib_call("f_i2c_wait_command");
+    lib_alloca_free(3);
+    lib_pop(SP_REG_LINK);
+    lib_return();
+  }
+
+  public void f_i2c_status()
+  {
+    // input: none
+    // output: r6: data
+    // modify: r6, a_addr
+    int R_i2c_data_out = R6;
+    int R_i2c_read_addr = R6;
+    label("f_i2c_status");
+    lib_set_im32(I2C_READ_ADDRESS);
+    lib_simple_mv(R_i2c_read_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    as_add(R_i2c_data_out,R_i2c_read_addr,reg_im(0), AM_REG,AM_SET,AM_REG);
+    lib_return();
+  }
+
+  public void f_i2c_wait_command()
+  {
+    // input: none
+    // output: none
+    // modify: r6 ~ r7, a_addr
+    int R_i2c_read_data = R6;
+    int R_i2c_read_addr = R7;
+    label("f_i2c_wait_command");
+    lib_set_im32(I2C_READ_ADDRESS);
+    lib_simple_mv(R_i2c_read_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    // while ((*I2C_READ_ADDRESS & 0x200) == 0x200)
+    as_mvi(0x200);
+    as_and(R_i2c_read_data,R_i2c_read_addr,SP_REG_MVI, AM_REG,AM_SET,AM_REG);
+    as_ceq(R_i2c_read_data,SP_REG_MVI, AM_REG,AM_REG);
+    as_mvi(-5);
+    as_mvih(0xffff);
+    as_bc();
+    lib_wait_delay_slot();
+    lib_return();
+  }
+
+  public void f_i2c_write()
+  {
+    // input: r6:dev_addr r7:reg_addr r8:data
+    // output: none
+    // modify: r6 ~ r8, d_addr, a_addr
+    int R_dev_addr = R6;
+    int R_reg_addr = R7;
+    int R_data = R8;
+    int R_i2c_data = R6;
+    label("f_i2c_write");
+    lib_push(SP_REG_LINK);
+    // save R6~R8
+    lib_alloca(3);
+    lib_wait_reg2addr();
+    as_nop(SP_REG_STACK_POINTER,SP_REG_STACK_POINTER,0, AM_SET,AM_SET,AM_REG);
+    as_add(1,R6,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    as_add(2,R7,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    as_add(3,R8,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    // i2c_start
+    m_i2c_start();
+    lib_call("f_i2c_wait_command");
+    // i2c_tx(dev_addr << 1)
+    as_nop(0,SP_REG_STACK_POINTER,0, AM_REG,AM_SET,AM_REG);
+    as_sl(R_i2c_data,1,reg_im(1), AM_REG,AM_OFFSET,AM_REG);
+    m_i2c_tx();
+    lib_call("f_i2c_wait_command");
+    // i2c_tx(reg)
+    as_nop(0,SP_REG_STACK_POINTER,0, AM_REG,AM_SET,AM_REG);
+    as_add(R_i2c_data,2,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    m_i2c_tx();
+    lib_call("f_i2c_wait_command");
+    // i2c_tx(data)
+    as_nop(0,SP_REG_STACK_POINTER,0, AM_REG,AM_SET,AM_REG);
+    as_add(R_i2c_data,3,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    m_i2c_tx();
+    lib_call("f_i2c_wait_command");
+    // i2c_stop
+    m_i2c_stop();
+    lib_call("f_i2c_wait_command");
+    lib_alloca_free(3);
+    lib_pop(SP_REG_LINK);
+    lib_return();
+  }
+
+  // macro of f_i2c_*
+  public void m_i2c_is_busy()
+  {
+    // input: none
+    // output: SP_REG_CP
+    // modify: r6 ~ r7, a_addr
+    int R_i2c_read_data = R6;
+    lib_call("f_i2c_status");
+    lib_set_im(0x200);
+    as_and(R_i2c_read_data,R_i2c_read_data,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    as_ceq(R_i2c_read_data,SP_REG_MVI, AM_REG,AM_REG);
+  }
+
+  public void m_i2c_start()
+  {
+    // modify: r6 ~ r7, d_addr
+    // The caller function must save the link register
+    int R_i2c_command = R6;
+    as_add(R_i2c_command,reg_im(0),reg_im(0), AM_REG,AM_REG,AM_REG);
+    lib_call("f_i2c_command");
+  }
+
+  public void m_i2c_stop()
+  {
+    // modify: r6 ~ r7, d_addr
+    // The caller function must save the link register
+    int R_i2c_command = R6;
+    lib_set_im(0x400);
+    lib_simple_mv(R_i2c_command, SP_REG_MVI);
+    lib_call("f_i2c_command");
+  }
+
+  public void m_i2c_tx()
+  {
+    // input: r6:data
+    // modify: r6 ~ r7, d_addr
+    // The caller function must save the link register
+    int R_i2c_data = R6;
+    lib_set_im(0x800);
+    as_or(R_i2c_data,R_i2c_data,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    lib_call("f_i2c_command");
+  }
+
+  public void m_i2c_rx()
+  {
+    // input: r6: ack(0)/nack(1)
+    // output: none
+    // The caller function must save the link register
+    // modify: r6 ~ r8, d_addr
+    int R_i2c_nack = R6;
+    as_and(R_i2c_nack,reg_im(1),reg_im(0), AM_REG,AM_REG,AM_REG);
+    as_sl(R_i2c_nack,R_i2c_nack,reg_im(8), AM_REG,AM_REG,AM_REG);
+    lib_set_im(0xc00);
+    as_or(R_i2c_nack,R_i2c_nack,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
+    lib_call("f_i2c_command");
+  }
+
   public void f_line()
   {
     // line(x0, y0, x1, y1, color);
@@ -550,33 +794,33 @@ public class AsmLib extends Asm
     {
       swap(x0, y0);
       swap(x1, y1);
-      ofx = width;
-      ofy = 1;
+      ofx = width_in_bits;
+      ofy = 0;
     }
     else
     {
-      ofx = 1;
-      ofy = width;
+      ofx = 0;
+      ofy = width_in_bits;
     }
     dx = abs(x1 - x0);
     if (dx == 0) return;
     if (x1 > x0)
     {
-      ix = ofx;
+      ix = (1 << ofx);
     }
     else
     {
-      ix = -ofx;
+      ix = -(1 << ofx);
     }
     if (y1 > y0)
     {
-      iy = ofy;
+      iy = (1 << ofy);
     }
     else
     {
-      iy = -ofy;
+      iy = -(1 << ofy);
     }
-    addr = SPRITE_ADDRESS + x0 * ofx + y0 * ofy;
+    addr = SPRITE_ADDRESS + (x0 << ofx) + (y0 << ofy);
     dy = abs(y1 - y0);
     er = dx >> 1;
     for (i = 0; i < dx; i++)
@@ -593,7 +837,9 @@ public class AsmLib extends Asm
      */
     // x0:sp[0] y0:sp[1] x1:sp[2] y1:sp[3] color:sp[4]
     // ofx:sp[5] ofy:sp[6]
+    // input data
     int Ix0, Iy0, Ix1, Iy1, Icolor;
+    // local variable
     int Sx0, Sy0, Sx1, Sy1, Scolor, Sdx, Sdy, Sofx, Sofy, Six, Siy, Sx, Sy;
     int Rer, Raddr;
     int Rt1, Rt2, Rt3;
@@ -641,8 +887,8 @@ public class AsmLib extends Asm
     as_add(Sy0,Iy0,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
     as_add(Sx1,Ix1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
     as_add(Sy1,Iy1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
-    as_add(Sofx,reg_im(1),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
-    lib_set_im(SPRITE_LINE_VOFFSET);
+    as_add(Sofx,reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    lib_set_im(spriteLineVoffsetInBits);
     as_add(Sofy,SP_REG_MVI,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     lib_ba("L_f_line_2");
     label("L_f_line_1");
@@ -650,8 +896,8 @@ public class AsmLib extends Asm
     as_add(Sy0,Ix0,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
     as_add(Sx1,Iy1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
     as_add(Sy1,Ix1,reg_im(0), AM_OFFSET,AM_OFFSET,AM_REG);
-    as_add(Sofy,reg_im(1),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
-    lib_set_im(SPRITE_LINE_VOFFSET);
+    as_add(Sofy,reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    lib_set_im(spriteLineVoffsetInBits);
     as_add(Sofx,SP_REG_MVI,reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     label("L_f_line_2");
     // d_addr,a_addr,b_addr = SP_REG_STACK_POINTER
@@ -663,24 +909,28 @@ public class AsmLib extends Asm
     // if (dx == 0) return;
     as_ceq(Rt1,reg_im(0), AM_REG,AM_REG);
     lib_bc("L_f_line_end");
-    // ix = -ofx
-    as_sub(Six,reg_im(0),Sofx, AM_OFFSET,AM_REG,AM_OFFSET);
-    // Rt1 = ofx
-    as_add(Rt1,Sofx,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    // Rt1 = 1 << ofx
+    as_sl(Rt1,reg_im(1),Sofx, AM_REG,AM_REG,AM_OFFSET);
+    // ix = -Rt1
+    as_sub(Six,reg_im(0),Rt1, AM_OFFSET,AM_REG,AM_REG);
     // if (x1 > x0) ix = Rt1
     as_cgta(Sx1,Sx0, AM_OFFSET,AM_OFFSET);
     as_mv(Six,Rt1, AM_OFFSET,AM_REG);
-    // iy = -ofy
-    as_sub(Siy,reg_im(0),Sofy, AM_OFFSET,AM_REG,AM_OFFSET);
-    // Rt1 = ofy
-    as_add(Rt1,Sofy,reg_im(0), AM_REG,AM_OFFSET,AM_REG);
+    // Rt1 = 1 << ofy
+    as_sl(Rt1,reg_im(1),Sofy, AM_REG,AM_REG,AM_OFFSET);
+    // iy = -Rt1
+    as_sub(Siy,reg_im(0),Rt1, AM_OFFSET,AM_REG,AM_REG);
     // if (y1 > y0) iy = Rt1
     as_cgta(Sy1,Sy0, AM_OFFSET,AM_OFFSET);
     as_mv(Siy,Rt1, AM_OFFSET,AM_REG);
-    // addr = SPRITE_ADDRESS + x0 * ofx + y0 * ofy;
-    as_mul(Raddr,Sx0,Sofx, AM_REG,AM_OFFSET,AM_OFFSET);
-    as_mul(Rt2,Sy0,Sofy, AM_REG,AM_OFFSET,AM_OFFSET);
+    // addr = SPRITE_ADDRESS + (x0 << ofx) + (y0 << ofy);
+    //   addr = x0 << ofx
+    as_sl(Raddr,Sx0,Sofx, AM_REG,AM_OFFSET,AM_OFFSET);
+    //   Rt2 = y0 << ofy
+    as_sl(Rt2,Sy0,Sofy, AM_REG,AM_OFFSET,AM_OFFSET);
+    //   addr += Rt2
     as_add(Raddr,Raddr,Rt2, AM_REG,AM_REG,AM_REG);
+    //   addr += SPRITE_ADDRESS
     lib_set_im32(SPRITE_ADDRESS);
     as_add(Raddr,Raddr,SP_REG_MVI, AM_REG,AM_REG,AM_REG);
     // dy = abs(y1 - y0);
@@ -741,11 +991,11 @@ public class AsmLib extends Asm
     lib_return();
   }
 
-  // return random value (0 ~ N)
+  // return random value (0 ~ (N - 1))
   public void f_nrand()
   {
     // input: r6:max number N (16bit)
-    // output: r6:random (0 ~ N)
+    // output: r6:random (0 ~ (N - 1))
     // modify: r6 ~ r8, d_addr, a_addr
     label("f_nrand");
     lib_simple_mv(R8, R6);
@@ -769,10 +1019,64 @@ public class AsmLib extends Asm
     lib_set_im(17); // r0 = 17
     as_sr(R7,R6,SP_REG_MVI, AM_REG,AM_REG,AM_REG); // r7 = r6 >> r0
     as_xor(R6,R7,R6, AM_REG,AM_REG,AM_REG); // r6 = r7 ^ r6
-    lib_set_im32(addr_abs("d_rand"));
     as_sl(R7,R6,reg_im(5), AM_REG,AM_REG,AM_REG); // r7 = r6 << 5
     as_xor(R6,R7,R6, AM_REG,AM_REG,AM_REG); // r6 = r7 ^ r6
+    lib_set_im32(addr_abs("d_rand"));
+    lib_wait_reg2addr();
     as_add(SP_REG_MVI,R6,reg_im(0), AM_SET,AM_REG,AM_REG); // mem[d] = r6 + 0
+  }
+
+  // reset timer and timer data
+  public void f_timer_reset()
+  {
+    // input: none
+    // modify: r6, d_addr
+    int R_timer_data_addr = R6;
+    int R_timer_reset_addr = R6;
+    label("f_timer_reset");
+    // reset timer count
+    lib_set_im32(addr_abs("d_timer_data"));
+    lib_simple_mv(R_timer_data_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    as_add(R_timer_data_addr,reg_im(0),reg_im(0), AM_SET,AM_REG,AM_REG);
+    // reset timer
+    lib_set_im32(TIMER_RESET_ADDRESS);
+    lib_simple_mv(R_timer_reset_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    lib_set_im(1);
+    as_add(R_timer_reset_addr,SP_REG_MVI,reg_im(0), AM_SET,AM_REG,AM_REG);
+    lib_set_im(0);
+    as_add(R_timer_reset_addr,SP_REG_MVI,reg_im(0), AM_SET,AM_REG,AM_REG);
+    lib_return();
+  }
+
+  // wait R6 clock cycles (since last call) then return
+  public void f_timer_wait()
+  {
+    // input: r6: wait clock cycle
+    // modify: r6 ~ r8, d_addr, a_addr
+    int R_wait_count = R6;
+    int R_timer_addr = R7;
+    int R_timer_data_addr = R7;
+    int R_next_time = R6;
+    int R_diff_time = R8;
+    label("f_timer_wait");
+    // R_next_time = "d_timer_data" + R_wait_count
+    lib_set_im32(addr_abs("d_timer_data"));
+    lib_simple_mv(R_timer_data_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    as_add(R_next_time,R_timer_data_addr,R_wait_count, AM_REG,AM_SET,AM_REG);
+    as_add(R_timer_data_addr,R_next_time,reg_im(0), AM_SET,AM_REG,AM_REG);
+    // R_timer_addr = TIMER_COUNT_ADDRESS
+    lib_set_im32(TIMER_COUNT_ADDRESS);
+    lib_simple_mv(R_timer_addr, SP_REG_MVI);
+    lib_wait_reg2addr();
+    label("L_f_timer_wait_1");
+    as_sub(R_diff_time,R_timer_addr,R_next_time, AM_REG,AM_SET,AM_REG);
+    as_cgta(R_diff_time,reg_im(0), AM_REG,AM_REG);
+    as_not(SP_REG_CP,SP_REG_CP, AM_REG,AM_REG);
+    lib_bc("L_f_timer_wait_1");
+    lib_return();
   }
 
   public void f_uart_char()
@@ -1024,6 +1328,18 @@ public class AsmLib extends Asm
   }
 
   // datalib --------------------------------
+
+  public void datalib_timer_data()
+  {
+    label("d_timer_data");
+    d32(0);
+  }
+
+  public void datalib_rand_data()
+  {
+    label("d_rand");
+    d32(0xfc720c27);
+  }
 
   public void datalib_ascii_chr_data()
   {

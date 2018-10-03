@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -18,6 +18,8 @@ module sc1_soc
     parameter UART_CLK_HZ = 50000000,
     parameter UART_SCLK_HZ = 115200,
     parameter UART_COUNTER_WIDTH = 9,
+    parameter I2C_CLK_HZ = 50000000,
+    parameter I2C_SCLK_HZ = 100000,
     parameter WIDTH_D = 32,
     parameter DEPTH_I = 12,
     parameter DEPTH_D = 12,
@@ -36,6 +38,10 @@ module sc1_soc
    output           audio_r,
    output           audio_l,
 `endif
+`ifdef USE_MINI_AUDIO
+   output           audio_r,
+   output           audio_l,
+`endif
 `ifdef USE_VGA
    input            clkv,
    input            resetv,
@@ -44,6 +50,15 @@ module sc1_soc
    output [3:0]     vga_r,
    output [3:0]     vga_g,
    output [3:0]     vga_b,
+`endif
+`ifdef USE_MINI_VGA
+   output           vga_hs,
+   output           vga_vs,
+   output [`MINI_VGA_BPP-1:0] vga_color_out,
+`endif
+`ifdef USE_I2C
+   inout            i2c_sda,
+   inout            i2c_scl,
 `endif
    output reg [9:0] led
    );
@@ -55,6 +70,7 @@ module sc1_soc
   localparam FFFF = {WIDTH_D{1'b1}};
 
   localparam WIDTH_I = 32;
+  localparam WIDTH_SOC = 32;
   localparam DEPTH_REG = 4;
   localparam PAGE_BITS = 12;
   localparam DA_MSB = (DEPTH_V - 1);
@@ -62,7 +78,7 @@ module sc1_soc
   localparam MAPPER_BITS = (DEPTH_V - PAGE_BITS);
 
   localparam MAP_MEM_D = 0;
-  localparam MAP_SPRITE = 1;
+  localparam MAP_NONE = 1;
   localparam MAP_REG_R = 2;
   localparam MAP_REG_W = 3;
   localparam MAP_MEM_I = 4;
@@ -70,8 +86,9 @@ module sc1_soc
   localparam MAP_CHR_CHR = 6;
   localparam MAP_CHR_BIT = 7;
   localparam MAP_MEM_S = 8;
+  localparam MAP_SPRITE = 9;
 
-  localparam DEPTH_IO_REG = 4;
+  localparam DEPTH_IO_REG = 5;
   localparam DEPTH_SYS_REG = 4;
 
   wire [WIDTH_I-1:0] mem_i_r;
@@ -100,10 +117,10 @@ module sc1_soc
 
   reg [DEPTH_V-1:0]  soc_addr_r;
   reg [DEPTH_V-1:0]  soc_addr_w;
-  reg [WIDTH_D-1:0]  soc_data_r;
-  reg [WIDTH_D-1:0]  soc_data_w;
-  reg                soc_we;
-  reg                soc_we_p1;
+  reg [WIDTH_SOC-1:0] soc_data_r;
+  reg [WIDTH_SOC-1:0] soc_data_w;
+  reg                 soc_we;
+  reg                 soc_we_p1;
 
   // I/O register
   localparam IO_REG_W_UART_TX = 0;
@@ -121,22 +138,26 @@ module sc1_soc
   localparam IO_REG_W_CHR_PALETTE1 = 12;
   localparam IO_REG_W_CHR_PALETTE2 = 13;
   localparam IO_REG_W_CHR_PALETTE3 = 14;
+  localparam IO_REG_W_TIMER_RESET = 15;
+  localparam IO_REG_W_I2C = 16;
   localparam IO_REG_R_UART_BUSY = 0;
   localparam IO_REG_R_VGA_VSYNC = 1;
   localparam IO_REG_R_VGA_VCOUNT = 2;
   localparam IO_REG_R_AUDIO_FULL = 3;
-  reg [WIDTH_D-1:0]  io_reg_w[0:((1 << DEPTH_IO_REG) - 1)];
-  reg [WIDTH_D-1:0]  io_reg_r[0:((1 << DEPTH_IO_REG) - 1)];
-  reg                io_reg_we;
-  reg [DEPTH_V-1:0]  io_reg_addr_r;
-  reg [WIDTH_D-1:0]  io_reg_r_copy;
+  localparam IO_REG_R_TIMER_COUNT = 4;
+  localparam IO_REG_R_I2C = 5;
+  reg [WIDTH_D-1:0]   io_reg_w[0:((1 << DEPTH_IO_REG) - 1)];
+  reg [WIDTH_D-1:0]   io_reg_r[0:((1 << DEPTH_IO_REG) - 1)];
+  reg                 io_reg_we;
+  reg [DEPTH_IO_REG-1:0] io_reg_addr_r;
+  reg [WIDTH_D-1:0]   io_reg_r_copy;
 
   // System register
   localparam SYS_REG_CPU_RESET = 0;
   localparam SYS_REG_CPU_RESUME = 1;
   localparam SYS_REG_MASTER_OF_MEM_D = 2;
-  reg [WIDTH_D-1:0]  sys_reg_w[0:((1 << DEPTH_SYS_REG) - 1)];
-  reg                sys_reg_we;
+  reg [WIDTH_D-1:0]   sys_reg_w[0:((1 << DEPTH_SYS_REG) - 1)];
+  reg                 sys_reg_we;
 
   // memory mapper
   reg [MAPPER_BITS-1:0] map_cpu_d_r_a;
@@ -190,7 +211,6 @@ module sc1_soc
   reg                   chr_bit_d_we;
   // sprite
   localparam SPRITE_BPP = 8;
-  wire [8-1:0]          ext_sprite_color;
   reg [DEPTH_V-1:0]     sprite_d_addr_w;
   reg [SPRITE_BPP-1:0]  sprite_d_w;
   reg                   sprite_d_we;
@@ -199,11 +219,43 @@ module sc1_soc
   wire [WIDTH_D-1:0]    vga_vcount;
   wire [32-1:0]         ext_vga_count_h;
   wire [32-1:0]         ext_vga_count_v;
-  wire [8-1:0]          ext_vga_color;
+`endif
+`ifdef USE_MINI_VGA
+  // sprite
+  reg [DEPTH_V-1:0]        sprite_d_addr_w;
+  reg [`MINI_VGA_BPP-1:0]  sprite_d_w;
+  reg                      sprite_d_we;
+  // vga
+  wire                     vga_vsync;
+  wire [WIDTH_D-1:0]       vga_vcount;
+  wire [32-1:0]            ext_vga_count_h;
+  wire [32-1:0]            ext_vga_count_v;
+  wire [`MINI_VGA_BPP-1:0] vga_color;
 `endif
 `ifdef USE_AUDIO
   // audio
   wire                  audio_full;
+`endif
+`ifdef USE_MINI_AUDIO
+  // mini audio
+  wire                  audio_full;
+`endif
+`ifdef USE_TIMER
+  // timer
+  wire [WIDTH_D-1:0]    timer_count;
+`endif
+`ifdef USE_I2C
+  wire [1:0]  i2c_command;
+  wire        i2c_start;
+  wire [7:0]  i2c_data_w;
+  wire        i2c_r_ack;
+  wire        i2c_w_ack;
+  wire [7:0]  i2c_data_r;
+  wire        i2c_busy;
+  assign i2c_command = io_reg_w[IO_REG_W_I2C][11:10];
+  assign i2c_start = io_reg_w[IO_REG_W_I2C][9];
+  assign i2c_r_ack = io_reg_w[IO_REG_W_I2C][8];
+  assign i2c_data_w = io_reg_w[IO_REG_W_I2C][7:0];
 `endif
 
   // address decode
@@ -211,13 +263,14 @@ module sc1_soc
     begin
       case (cpu_d_addr_r_a[DA_MSB:DA_LSB])
         0:       map_cpu_d_r_a = MAP_MEM_D;
-        1:       map_cpu_d_r_a = MAP_SPRITE;
+        1:       map_cpu_d_r_a = MAP_NONE;
         2:       map_cpu_d_r_a = MAP_REG_R;
         3:       map_cpu_d_r_a = MAP_REG_W;
         4:       map_cpu_d_r_a = MAP_MEM_I;
         5:       map_cpu_d_r_a = MAP_SYS;
         6:       map_cpu_d_r_a = MAP_CHR_CHR;
         7:       map_cpu_d_r_a = MAP_CHR_BIT;
+        8,9,10,11: map_cpu_d_r_a = MAP_SPRITE;
         default: map_cpu_d_r_a = MAP_MEM_S;
       endcase
     end
@@ -226,13 +279,14 @@ module sc1_soc
     begin
       case (cpu_d_addr_r_b[DA_MSB:DA_LSB])
         0:       map_cpu_d_r_b = MAP_MEM_D;
-        1:       map_cpu_d_r_b = MAP_SPRITE;
+        1:       map_cpu_d_r_b = MAP_NONE;
         2:       map_cpu_d_r_b = MAP_REG_R;
         3:       map_cpu_d_r_b = MAP_REG_W;
         4:       map_cpu_d_r_b = MAP_MEM_I;
         5:       map_cpu_d_r_b = MAP_SYS;
         6:       map_cpu_d_r_b = MAP_CHR_CHR;
         7:       map_cpu_d_r_b = MAP_CHR_BIT;
+        8,9,10,11: map_cpu_d_r_b = MAP_SPRITE;
         default: map_cpu_d_r_b = MAP_MEM_S;
       endcase
     end
@@ -241,13 +295,14 @@ module sc1_soc
     begin
       case (cpu_d_addr_w[DA_MSB:DA_LSB])
         0:       map_cpu_d_w = MAP_MEM_D;
-        1:       map_cpu_d_w = MAP_SPRITE;
+        1:       map_cpu_d_w = MAP_NONE;
         2:       map_cpu_d_w = MAP_REG_R;
         3:       map_cpu_d_w = MAP_REG_W;
         4:       map_cpu_d_w = MAP_MEM_I;
         5:       map_cpu_d_w = MAP_SYS;
         6:       map_cpu_d_w = MAP_CHR_CHR;
         7:       map_cpu_d_w = MAP_CHR_BIT;
+        8,9,10,11: map_cpu_d_w = MAP_SPRITE;
         default: map_cpu_d_w = MAP_MEM_S;
       endcase
     end
@@ -256,13 +311,14 @@ module sc1_soc
     begin
       case (soc_addr_r[DA_MSB:DA_LSB])
         0:       map_soc_r = MAP_MEM_D;
-        1:       map_soc_r = MAP_SPRITE;
+        1:       map_soc_r = MAP_NONE;
         2:       map_soc_r = MAP_REG_R;
         3:       map_soc_r = MAP_REG_W;
         4:       map_soc_r = MAP_MEM_I;
         5:       map_soc_r = MAP_SYS;
         6:       map_soc_r = MAP_CHR_CHR;
         7:       map_soc_r = MAP_CHR_BIT;
+        8,9,10,11: map_soc_r = MAP_SPRITE;
         default: map_soc_r = MAP_MEM_S;
       endcase
     end
@@ -271,13 +327,14 @@ module sc1_soc
     begin
       case (soc_addr_w[DA_MSB:DA_LSB])
         0:       map_soc_w = MAP_MEM_D;
-        1:       map_soc_w = MAP_SPRITE;
+        1:       map_soc_w = MAP_NONE;
         2:       map_soc_w = MAP_REG_R;
         3:       map_soc_w = MAP_REG_W;
         4:       map_soc_w = MAP_MEM_I;
         5:       map_soc_w = MAP_SYS;
         6:       map_soc_w = MAP_CHR_CHR;
         7:       map_soc_w = MAP_CHR_BIT;
+        8,9,10,11: map_soc_w = MAP_SPRITE;
         default: map_soc_w = MAP_MEM_S;
       endcase
     end
@@ -481,8 +538,21 @@ module sc1_soc
       io_reg_r[IO_REG_R_VGA_VSYNC] <= vga_vsync;
       io_reg_r[IO_REG_R_VGA_VCOUNT] <= vga_vcount;
 `endif
+`ifdef USE_MINI_VGA
+      io_reg_r[IO_REG_R_VGA_VSYNC] <= vga_vsync;
+      io_reg_r[IO_REG_R_VGA_VCOUNT] <= vga_vcount;
+`endif
 `ifdef USE_AUDIO
       io_reg_r[IO_REG_R_AUDIO_FULL] <= audio_full;
+`endif
+`ifdef USE_MINI_AUDIO
+      io_reg_r[IO_REG_R_AUDIO_FULL] <= audio_full;
+`endif
+`ifdef USE_TIMER
+      io_reg_r[IO_REG_R_TIMER_COUNT] <= timer_count;
+`endif
+`ifdef USE_I2C
+      io_reg_r[IO_REG_R_I2C] <= {i2c_busy, i2c_w_ack, i2c_data_r};
 `endif
     end
 
@@ -537,6 +607,105 @@ module sc1_soc
      .stopped (cpu_stopped)
      );
 
+`ifdef USE_INIT_RAM
+  default_code_mem
+    #(
+      .DATA_WIDTH (WIDTH_I),
+      .ADDR_WIDTH (DEPTH_I)
+      )
+  mem_i
+    (
+     .clk (clk),
+     .addr_r (mem_i_addr_r),
+     .addr_w (mem_i_addr_w),
+     .data_in (mem_i_w),
+     .we (mem_i_we),
+     .data_out (mem_i_r)
+     );
+
+  default_data_mem_pair
+    #(
+      .DATA_WIDTH (WIDTH_D),
+      .ADDR_WIDTH (DEPTH_D)
+      )
+  mem_d
+    (
+     .clk (clk),
+     .addr_r_a (mem_d_addr_r_a),
+     .addr_r_b (mem_d_addr_r_b),
+     .addr_w (mem_d_addr_w),
+     .data_in (mem_d_w),
+     .we (mem_d_we),
+     .data_out_a (mem_d_r_a),
+     .data_out_b (mem_d_r_b)
+     );
+
+  reg [3:0] state_loader;
+  // reset and resume
+  always @(posedge clk)
+    begin
+      if (reset == TRUE)
+        begin
+          state_loader <= ZERO;
+          soc_addr_w <= ZERO;
+          soc_data_w <= ZERO;
+          soc_we <= FALSE;
+        end
+      else
+        // init
+        begin
+          case (state_loader)
+            0:
+              begin
+                // cpu reset on
+                soc_addr_w <= VADDR_SYS_REG + SYS_REG_CPU_RESET;
+                soc_data_w <= 32'h00000001;
+                soc_we <= TRUE;
+                state_loader <= 1;
+              end
+            1:
+              begin
+                // master of mem_d: cpu
+                soc_addr_w <= VADDR_SYS_REG + SYS_REG_MASTER_OF_MEM_D;
+                soc_data_w <= 32'h00000001;
+                soc_we <= TRUE;
+                state_loader <= 2;
+              end
+            2:
+              begin
+                // cpu reset off
+                soc_addr_w <= VADDR_SYS_REG + SYS_REG_CPU_RESET;
+                soc_data_w <= 32'h00000000;
+                soc_we <= TRUE;
+                state_loader <= 3;
+              end
+            3:
+              begin
+                // resume on
+                soc_addr_w <= VADDR_SYS_REG + SYS_REG_CPU_RESUME;
+                soc_data_w <= 32'h00000001;
+                soc_we <= TRUE;
+                state_loader <= 4;
+              end
+            4:
+              begin
+                // resume off
+                soc_addr_w <= VADDR_SYS_REG + SYS_REG_CPU_RESUME;
+                soc_data_w <= 32'h00000000;
+                soc_we <= TRUE;
+                state_loader <= 4;
+              end
+            default:
+              begin
+                soc_addr_w <= ZERO;
+                soc_data_w <= ZERO;
+                soc_we <= FALSE;
+                state_loader <= 0;
+              end
+          endcase
+        end
+    end
+`else
   rw_port_ram
     #(
       .DATA_WIDTH (WIDTH_I),
@@ -568,8 +737,10 @@ module sc1_soc
      .data_out_a (mem_d_r_a),
      .data_out_b (mem_d_r_b)
      );
+`endif
 
-// 16bit scratch memory
+
+  // 16bit scratch memory
 `ifdef USE_MEM_S
   localparam WIDTH_S = 16;
   localparam DEPTH_S = 16;
@@ -945,6 +1116,95 @@ module sc1_soc
 
 `endif
 
+`ifdef USE_MINI_VGA
+
+  // sprite_d_addr_w
+  always @*
+    begin
+      sprite_d_addr_w = cpu_d_addr_w;
+    end
+
+  // sprite_d_w
+  always @*
+    begin
+      sprite_d_w = cpu_d_w;
+    end
+
+  // sprite_d_we
+  always @*
+    begin
+      if (map_cpu_d_w == MAP_SPRITE)
+        begin
+          sprite_d_we = cpu_d_we;
+        end
+      else
+        begin
+          sprite_d_we = FALSE;
+        end
+    end
+
+  mini_sprite
+    #(
+      .SPRITE_WIDTH_BITS (`MINI_VGA_SPRITE_WIDTH_BITS),
+      .SPRITE_HEIGHT_BITS (`MINI_VGA_SPRITE_HEIGHT_BITS),
+      .BPP (`MINI_VGA_BPP)
+      )
+  mini_sprite_0
+    (
+     .clk (clk),
+     .reset (reset),
+
+     .bitmap_length (),
+     .bitmap_address (sprite_d_addr_w),
+     .bitmap_din (sprite_d_w),
+     .bitmap_dout (),
+     .bitmap_we (sprite_d_we),
+     .bitmap_oe (FALSE),
+
+     .x (io_reg_w[IO_REG_W_SPRITE_X]),
+     .y (io_reg_w[IO_REG_W_SPRITE_Y]),
+     .scale (io_reg_w[IO_REG_W_SPRITE_SCALE]),
+
+     .ext_color (vga_color),
+     .ext_count_h (ext_vga_count_h),
+     .ext_count_v (ext_vga_count_v)
+     );
+
+  mini_vga
+    #(
+      .VGA_MAX_H (`MINI_VGA_MAX_H),
+      .VGA_MAX_V (`MINI_VGA_MAX_V),
+      .VGA_WIDTH (`MINI_VGA_WIDTH),
+      .VGA_HEIGHT (`MINI_VGA_HEIGHT),
+      .VGA_SYNC_H_START (`MINI_VGA_SYNC_H_START),
+      .VGA_SYNC_V_START (`MINI_VGA_SYNC_V_START),
+      .VGA_SYNC_H_END (`MINI_VGA_SYNC_H_END),
+      .VGA_SYNC_V_END (`MINI_VGA_SYNC_V_END),
+      .LINE_BITS (`MINI_VGA_LINE_BITS),
+      .COUNTER_BITS (`MINI_VGA_COUNTER_BITS),
+      .BPP (`MINI_VGA_BPP)
+      )
+  mini_vga_0
+    (
+     .clk (clk),
+     .reset (reset),
+
+     .ext_factor_mul (`MINI_VGA_FACTOR_MUL),
+     .ext_factor_div (`MINI_VGA_FACTOR_DIV),
+     .scale_h (`MINI_VGA_SCALE_H),
+     .vsync (vga_vsync),
+     .vcount (vga_vcount),
+     .ext_color (vga_color),
+     .ext_vga_hs (vga_hs),
+     .ext_vga_vs (vga_vs),
+     .ext_vga_de (),
+     .ext_vga_color (vga_color_out),
+     .ext_count_h (ext_vga_count_h),
+     .ext_count_v (ext_vga_count_v)
+     );
+
+`endif
+
 `ifdef USE_AUDIO
 
   audio_output audio_output_0
@@ -957,6 +1217,27 @@ module sc1_soc
      .full (audio_full),
      .ext_audio_clk (clka),
      .ext_audio_reset (reseta),
+     .ext_audio_r (audio_r),
+     .ext_audio_l (audio_l)
+     );
+
+`endif
+
+`ifdef USE_MINI_AUDIO
+
+  mini_audio
+    #(
+      .COUNTER_BITS (32)
+      )
+  mini_audio_0
+    (
+     .clk (clk),
+     .reset (reset),
+     .data (io_reg_w[IO_REG_W_AUDIO_DATA]),
+     .valid_toggle (io_reg_w[IO_REG_W_AUDIO_VALID]),
+     .ext_factor_mul (`MINI_AUDIO_FACTOR_MUL),
+     .ext_factor_div (`MINI_AUDIO_FACTOR_DIV),
+     .full (audio_full),
      .ext_audio_r (audio_r),
      .ext_audio_l (audio_l)
      );
@@ -1165,6 +1446,45 @@ module sc1_soc
      .clk (clk),
      .addr (rom_d_addr),
      .data_out (rom_d_data)
+     );
+
+`endif
+
+`ifdef USE_TIMER
+
+  free_run_counter
+    #(
+      .WIDTH (WIDTH_D)
+      )
+  free_run_counter_0
+    (
+     .clk (clk),
+     .reset (io_reg_w[IO_REG_W_TIMER_RESET]),
+     .count (timer_count)
+     );
+
+`endif
+
+`ifdef USE_I2C
+
+  i2c_master_single
+    #(
+      .CLK_HZ (I2C_CLK_HZ),
+      .SCLK_HZ (I2C_SCLK_HZ)
+      )
+  i2c_master_single_0
+    (
+     .clk (clk),
+     .reset (reset),
+     .command (i2c_command),
+     .start (i2c_start),
+     .data_w (i2c_data_w),
+     .r_ack (i2c_r_ack),
+     .w_ack (i2c_w_ack),
+     .data_r (i2c_data_r),
+     .busy (i2c_busy),
+     .scl (i2c_scl),
+     .sda (i2c_sda)
      );
 
 `endif

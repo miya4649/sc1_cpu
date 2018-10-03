@@ -2,11 +2,22 @@
 使用方法は下記のサイトを参照してください。
 http://cellspe.matrix.jp/zerofpga/sc1_cpu.html
 
+* 更新情報
+
+** 2018/10/03
+*** DE0-CVのUARTのピン配置を変更しました。
+UART_TXD: GPIO-1の2番ピン→GPIO-0の35番ピン
+UART_RXD: GPIO-1の4番ピン→GPIO-0の37番ピン
+UART_GND: GPIO-1の12番ピン→GPIO-0の30番ピン
+*** I2Cバスに対応しました。
+*** TinyFPGA BXボードに対応しました。
+
 * ターゲットボードについて
 
 このプロジェクトは以下のFPGAボードに対応しています。
 Terasic DE0-CV
 BeMicro CV A9
+TinyFPGA BX
 以下のボードでは周辺I/OはLEDとUARTのみの対応です。
 BeMicro Max 10
 MAX10-FB基板（FPGA電子工作スーパーキット付録基板）
@@ -81,11 +92,12 @@ Raspberry Pi、もしくはUSBシリアルケーブルを接続したPCからFPG
 このプロジェクトにおける各ボードごとのUARTピン配置
 ボード	UART_TXD	UART_RXD	GND
 Raspberry Pi	8番ピン	10番ピン	6番ピン
-DE0-CV	GPIO-1の2番ピン	GPIO-1の4番ピン	GPIO-1の12番ピン
+DE0-CV	GPIO-0の35番ピン	GPIO-0の37番ピン	GPIO-0の30番ピン
 Bemicro Max10	GPIO_J4の35番ピン	GPIO_J4の37番ピン	GPIO_J4の33番ピン
 Bemicro CVA9	GPIO_J4の35番ピン	GPIO_J4の37番ピン	GPIO_J4の33番ピン
 Lattice iCE40HX-8K	D16ピン(J2-35番ピン)	C16ピン(J2-37番ピン)	GND(J2-39番ピン)
 MAX10-FB基板	P140(CN2-8番ピン)	P141(CN2-9番ピン)	GND(CN2-20番ピン)
+TinyFPGA BX	PIN_1	PIN_2	G
 
 ** Raspberry Pi 3の場合
 
@@ -173,6 +185,10 @@ cd sc1_cpu/tools
 ./reciever
 を実行してください。
 
+* SC1-SOC 仕様
+
+現在の仕様では、外部I/OへのアクセスはDestination, Source_A のみ接続しています。
+そのため、b_addr にローカルメモリ以外の外部デバイスのアドレスを指定しても値を読むことはできません。Source_Bに外部デバイスから読んだ値を入れたい場合は、一旦Source_Aを使って汎用レジスタに読み込んでから使用してください。
 
 * 命令セット・アーキテクチャ (2017/11/17)
 
@@ -317,207 +333,206 @@ R10からR11は揮発性の汎用レジスター。
 R12からR14は非揮発性（呼び出された側が復元責任を持つ）の汎用レジスター。
 
 
-各命令の解説:
+* 各命令の解説
 
-* ADD
+** ADD
 
-解説: 加算
+解説：加算
 
-アセンブリ: add(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+アセンブリ：add(reg_d, reg_a, reg_b, am_d, am_a, am_b)
 
-機能: D = A + B;
-
-
-* SUB
-
-解説: 減算
-
-アセンブリ: sub(reg_d, reg_a, reg_b, am_d, am_a, am_b)
-
-機能: D = A - B;
+機能：D = A + B;
 
 
-* AND
+** SUB
 
-解説: 論理AND
+解説：減算
 
-アセンブリ: and(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+アセンブリ：sub(reg_d, reg_a, reg_b, am_d, am_a, am_b)
 
-機能: D = A & B;
-
-
-* OR
-
-解説: 論理OR
-
-アセンブリ: or(reg_d, reg_a, reg_b, am_d, am_a, am_b)
-
-機能: D = A | B;
+機能：D = A - B;
 
 
-* XOR
+** AND
 
-解説: 論理XOR
+解説：論理AND
 
-アセンブリ: xor(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+アセンブリ：and(reg_d, reg_a, reg_b, am_d, am_a, am_b)
 
-機能: D = A ^ B;
-
-
-* NOT
-
-解説: 論理NOT
-
-アセンブリ: not(reg_d, reg_a, am_d, am_a)
-
-機能: D = ~A;
+機能：D = A & B;
 
 
-* SR
+** OR
 
-解説: Shift Right。論理右シフト
+解説：論理OR
 
-アセンブリ: sr(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+アセンブリ：or(reg_d, reg_a, reg_b, am_d, am_a, am_b)
 
-機能: D = A >> B;
-
-
-* SL
-
-解説: Shift Left。論理左シフト
-
-アセンブリ: sl(reg_d, reg_a, reg_b, am_d, am_a, am_b)
-
-機能: D = A << B;
+機能：D = A | B;
 
 
-* SRA
+** XOR
 
-解説: Shift Right Arithmetic。算術右シフト
+解説：論理XOR
 
-アセンブリ: sra(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+アセンブリ：xor(reg_d, reg_a, reg_b, am_d, am_a, am_b)
 
-機能: D = A >>> B;
-
-
-* MUL
-
-解説: 乗算
-
-アセンブリ: mul(reg_d, reg_a, reg_b, am_d, am_a, am_b)
-
-機能: D = A * B;
+機能：D = A ^ B;
 
 
-* HALT
+** NOT
 
-解説: プログラム実行停止。Resume信号で再開される。
+解説：論理NOT
 
-アセンブリ: halt()
+アセンブリ：not(reg_d, reg_a, am_d, am_a)
 
-機能:
-if (Resume signal) {PC = PC + 1;}
+機能：D = ~A;
+
+
+** SR
+
+解説：Shift Right。論理右シフト
+
+アセンブリ：sr(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+
+機能：D = A >> B;
+
+
+** SL
+
+解説：Shift Left。論理左シフト
+
+アセンブリ：sl(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+
+機能：D = A << B;
+
+
+** SRA
+
+解説：Shift Right Arithmetic。算術右シフト
+
+アセンブリ：sra(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+
+機能：D = A >>> B;
+
+
+** MUL
+
+解説：乗算
+
+アセンブリ：mul(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+
+機能：D = A * B;
+
+
+** HALT
+
+解説：プログラム実行停止。Resume信号で再開される。
+
+アセンブリ：halt()
+
+機能：if (Resume signal) {PC = PC + 1;}
 else {PC = PC;}
 
 
-* NOP
+** NOP
 
-解説: 何もしない。ただし、アドレッシング・モードに0以外を指定すればアドレス操作だけを行うことが可能。アドレス操作も行わない場合はam_d, am_a, am_bを0にしなければいけない。
+解説：何もしない。ただし、アドレッシング・モードに0以外を指定すればアドレス操作だけを行うことが可能。アドレス操作も行わない場合はam_d, am_a, am_bを0にしなければいけない。
 
-アセンブリ: nop(reg_d, reg_a, reg_b, am_d, am_a, am_b)
+アセンブリ：nop(reg_d, reg_a, reg_b, am_d, am_a, am_b)
 
-機能: None
-
-
-* MV
-
-解説: Move。もし(R1 != 0)ならばDにAを代入。
-
-アセンブリ: mv(reg_d, reg_a, am_d, am_a)
-
-機能: if (R1 != 0) {D = A;}
+機能：None
 
 
-* MVI
+** MV
 
-解説: Move Immediate。16bit即値をR0に代入。上位16bitは0
+解説：Move。もし(R1 != 0)ならばDにAを代入。
 
-アセンブリ: mvi(im)
+アセンブリ：mv(reg_d, reg_a, am_d, am_a)
 
-機能: R0 = im
-
-
-* MVIH
-
-解説: Move Immediate High。16bit即値をR0の上位16bitに代入。
-
-アセンブリ: mvih(im)
-
-機能: R0 = (R0 & 0xffff) | (im << 16)
+機能：if (R1 != 0) {D = A;}
 
 
-* CEQ
+** MVI
 
-解説: Compare Equal。もし(A == B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
+解説：Move Immediate。16bit即値をR0に代入。上位16bitは0
 
-アセンブリ: ceq(reg_a, reg_b, am_a, am_b)
+アセンブリ：mvi(im)
 
-機能: if (A == B) {R1 = 0xffffffff;} else {R1 = 0;}
-
-
-* CGT
-
-解説: Compare Greater Than。もし(A > B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
-
-アセンブリ: cgt(reg_a, reg_b, am_a, am_b)
-
-機能: if (A > B) {R1 = 0xffffffff;} else {R1 = 0;}
+機能：R0 = im
 
 
-* CGTA
+** MVIH
 
-解説: Compare Greater Than Arithmetic。A、Bをsignedとして扱い、もし(A > B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
+解説：Move Immediate High。16bit即値をR0の上位16bitに代入。
 
-アセンブリ: cgta(reg_a, reg_b, am_a, am_b)
+アセンブリ：mvih(im)
 
-機能: if (A(signed) > B(signed)) {R1 = 0xffffffff;} else {R1 = 0;}
-
-
-* BC
-
-解説: Branch Conditional。もし(R1 != 0)なら現在のPCにR0を加算した命令アドレスに分岐する。それ以外なら次の命令に進む。
-
-アセンブリ: bc()
-
-機能: if (R1 != 0) {PC += R0;}
+機能：R0 = (R0 & 0xffff) | (im << 16)
 
 
-* BL
+** CEQ
 
-解説: Branch and Link。現在のPC+ディレイ・スロット(3)+1をR2にコピーし、現在のPCにR0を加算した命令アドレスに分岐する。このリンク・アドレスを用いてリターン(BA)した場合、この命令のディレイ・スロットを飛び越してその次の命令に戻ってくる。
+解説：Compare Equal。もし(A == B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
 
-アセンブリ: bl()
+アセンブリ：ceq(reg_a, reg_b, am_a, am_b)
 
-機能: {R2 = PC + 1 + DelaySlot(3); PC += R0;}
-
-
-* BA
-
-解説: Branch Absolute。R0の値の命令アドレスにジャンプする。
-
-アセンブリ: ba()
-
-機能: PC = R0
+機能：if (A == B) {R1 = 0xffffffff;} else {R1 = 0;}
 
 
-* LOOP
+** CGT
 
-解説: ループ命令。指定範囲の命令を指定回数繰り返し実行する。
+解説：Compare Greater Than。もし(A > B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
+
+アセンブリ：cgt(reg_a, reg_b, am_a, am_b)
+
+機能：if (A > B) {R1 = 0xffffffff;} else {R1 = 0;}
+
+
+** CGTA
+
+解説：Compare Greater Than Arithmetic。A、Bをsignedとして扱い、もし(A > B)ならばR1 = 0xffffffff、それ以外ならR1 = 0
+
+アセンブリ：cgta(reg_a, reg_b, am_a, am_b)
+
+機能：if (A(signed) > B(signed)) {R1 = 0xffffffff;} else {R1 = 0;}
+
+
+** BC
+
+解説：Branch Conditional。もし(R1 != 0)なら現在のPCにR0を加算した命令アドレスに分岐する。それ以外なら次の命令に進む。
+
+アセンブリ：bc()
+
+機能：if (R1 != 0) {PC += R0;}
+
+
+** BL
+
+解説：Branch and Link。現在のPC+ディレイ・スロット(3)+1をR2にコピーし、現在のPCにR0を加算した命令アドレスに分岐する。このリンク・アドレスを用いてリターン(BA)した場合、この命令のディレイ・スロットを飛び越してその次の命令に戻ってくる。
+
+アセンブリ：bl()
+
+機能：{R2 = PC + 1 + DelaySlot(3); PC += R0;}
+
+
+** BA
+
+解説：Branch Absolute。R0の値の命令アドレスにジャンプする。
+
+アセンブリ：ba()
+
+機能：PC = R0
+
+
+** LOOP
+
+解説：ループ命令。指定範囲の命令を指定回数繰り返し実行する。
 ループ回数：(R3 + 1)
 ループ終了位置オフセット：R4 (この命令のPC + R4の命令を実行後にジャンプする)
 ジャンプ先オフセット：R5（ループ終了位置のPC + R5にジャンプ）
 R4 >= 4, R5 <= 0 でなければならない。
 
-アセンブリ: loop()
+アセンブリ：loop()
 
-機能: R3, R4, R5を内部レジスタにコピーし、ループ実行を予約する。
+機能：R3, R4, R5を内部レジスタにコピーし、ループ実行を予約する。

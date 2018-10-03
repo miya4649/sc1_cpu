@@ -24,8 +24,13 @@ set_global_assignment -name VERILOG_FILE ../dual_clk_ram.v
 set_global_assignment -name VERILOG_FILE ../shift_register_vector.v
 set_global_assignment -name VERILOG_FILE ../sprite.v
 set_global_assignment -name VERILOG_FILE ../vga_iface.v
+set_global_assignment -name VERILOG_FILE ../free_run_counter.v
+set_global_assignment -name VERILOG_FILE ../i2c_master_single.v
 set_global_assignment -name VERILOG_FILE ../default_code_rom.v
 set_global_assignment -name VERILOG_FILE ../default_data_rom.v
+set_global_assignment -name VERILOG_FILE ../default_code_mem.v
+set_global_assignment -name VERILOG_FILE ../default_data_mem.v
+set_global_assignment -name VERILOG_FILE ../default_data_mem_pair.v
 
 set_global_assignment -name SDC_FILE bemicro_max10_start.sdc
 

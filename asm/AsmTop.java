@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -17,10 +17,12 @@ public class AsmTop
 {
   private static final Synth synth = new Synth();
   private static final Examples examples = new Examples();
+  private static final MiniSynth mini_synth = new MiniSynth();
 
   public static void main(String[] args)
   {
     synth.do_asm();
     examples.do_asm();
+    mini_synth.do_asm();
   }
 }

@@ -14,6 +14,11 @@
 #define CODE_FILENAME "../bin_code.bin"
 #define DATA_FILENAME "../bin_data.bin"
 #define MAX_FILE_SIZE 0x100000
+#define SC1_CODE_ADDR 0x4000
+#define SC1_DATA_ADDR 0x0000
+#define SYS_RESET_ADDR 0x5000
+#define SYS_RESUME_ADDR 0x5001
+#define SYS_MASTER_ADDR 0x5002
 
 typedef struct
 {
@@ -100,8 +105,8 @@ int main(int argc, char *argv[])
 
   uart = uart_open(devicename);
 
-  uart_send_word(uart, 0x5000, 1); // cpu reset
-  uart_send_word(uart, 0x5002, 0); // soc master
+  uart_send_word(uart, SYS_RESET_ADDR, 1); // cpu reset
+  uart_send_word(uart, SYS_MASTER_ADDR, 0); // soc master
 
   printf("Sending code...\n");
   open_datafile(&buffer, cfilename);
@@ -115,10 +120,10 @@ int main(int argc, char *argv[])
   uart_send_data(uart, buffer.size, buffer.buffer, SC1_DATA_ADDR);
   close_datafile(&buffer);
 
-  uart_send_word(uart, 0x5002, 1); // cpu master
-  uart_send_word(uart, 0x5000, 0); // cpu reset off
-  uart_send_word(uart, 0x5001, 1); // resume on
-  uart_send_word(uart, 0x5001, 0); // resume off
+  uart_send_word(uart, SYS_MASTER_ADDR, 1); // cpu master
+  uart_send_word(uart, SYS_RESET_ADDR, 0); // cpu reset off
+  uart_send_word(uart, SYS_RESUME_ADDR, 1); // resume on
+  uart_send_word(uart, SYS_RESUME_ADDR, 0); // resume off
 
   uart_close(uart);
   printf("Finished.\n");

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017, miya
+  Copyright (c) 2017-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -19,7 +19,8 @@ public class Synth extends AsmLib
 {
   private static final int TRUE = 1; // for program
   private static final int FALSE = 0;
-  private static final int ROM_DEPTH = 12; // ROM_DEPTH = 10 for small FPGAs 
+  private static final int CODE_ROM_DEPTH = 12;
+  private static final int DATA_ROM_DEPTH = 12;
   private static final int AUDIO_DIVIDER = 374;
 
   private static final int STATE_ATTACK = 0;
@@ -1152,8 +1153,8 @@ public class Synth extends AsmLib
   @Override
   public void init()
   {
-    set_rom_depth(ROM_DEPTH);
-    set_stack_address((1 << ROM_DEPTH) - 1);
+    set_rom_depth(CODE_ROM_DEPTH, DATA_ROM_DEPTH);
+    set_stack_address((1 << DATA_ROM_DEPTH) - 1);
     set_filename("synth");
 
     envParam.clear();

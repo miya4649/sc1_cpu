@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2017, miya
+  Copyright (c) 2016-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -14,6 +14,17 @@
 */
 
 `include "../topinclude.v"
+`define USE_I2C
+
+/*
+ GPIO Pinout:
+ UART TXD: GPIO_0 Pin35 (GPIO_0[30])
+ UART RXD: GPIO_0 Pin37 (GPIO_0[32])
+ I2C SCL : GPIO_0 Pin36 (GPIO_0[31])
+ I2C SDA : GPIO_0 Pin38 (GPIO_0[33])
+ AUDIO R : GPIO_1 Pin38 (GPIO_1[33])
+ AUDIO L : GPIO_1 Pin40 (GPIO_1[35])
+*/
 
 module top
   (
@@ -33,12 +44,15 @@ module top
    output [3:0] VGA_B,
 `endif
    output [9:0] LEDR,
+   inout [35:0] GPIO_0,
    inout [35:0] GPIO_1
    );
 
   localparam UART_CLK_HZ = 50000000;
   localparam UART_SCLK_HZ = 115200;
   localparam UART_COUNTER_WIDTH = 9;
+  localparam I2C_CLK_HZ = 50000000;
+  localparam I2C_SCLK_HZ = 100000;
   localparam WIDTH_D = 32;
   localparam DEPTH_I = 12;
   localparam DEPTH_D = 12;
@@ -46,11 +60,25 @@ module top
   wire          pll_locked;
 
   // unused GPIO
-  assign GPIO_1[32:4] = 36'hzzzzzzzzz;
+  assign GPIO_0[29:0] = 30'bz;
+  assign GPIO_0[35:34] = 2'bz;
+  assign GPIO_1[32:0] = 33'bz;
   assign GPIO_1[34] = 1'bz;
-  assign GPIO_1[0] = 1'bz;
-  assign GPIO_1[2] = 1'bz;
 
+`ifndef USE_UART
+  assign GPIO_0[30] = 1'bz;
+  assign GPIO_0[32] = 1'bz;
+`endif
+
+`ifndef USE_I2C
+  assign GPIO_0[31] = 1'bz;
+  assign GPIO_0[33] = 1'bz;
+`endif
+
+`ifndef USE_AUDIO
+  assign GPIO_1[33] = 1'bz;
+  assign GPIO_1[35] = 1'bz;
+`endif
 
   // generate reset signal (push button 1)
   reg           reset;
@@ -88,6 +116,8 @@ module top
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
       .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
+      .I2C_CLK_HZ (I2C_CLK_HZ),
+      .I2C_SCLK_HZ (I2C_SCLK_HZ),
       .WIDTH_D (WIDTH_D),
       .DEPTH_I (DEPTH_I),
       .DEPTH_D (DEPTH_D)
@@ -113,8 +143,9 @@ module top
      .vga_g (VGA_G_in),
      .vga_b (VGA_B_in),
 `endif
-`ifdef USE_HEX_LED
-     .hex_led (hex_led),
+`ifdef USE_I2C
+     .i2c_scl (GPIO_0[31]),
+     .i2c_sda (GPIO_0[33]),
 `endif
      .clk (CLOCK_50),
      .reset (reset),
@@ -122,22 +153,14 @@ module top
    );
 
 `ifdef USE_UART
-
   // uart
   wire          uart_txd;
   wire          uart_rxd;
-  assign GPIO_1[1] = uart_txd;
-  assign uart_rxd = GPIO_1[3];
-
-`else
-
-  assign GPIO_1[1] = 1'bz;
-  assign GPIO_1[3] = 1'bz;
-
+  assign GPIO_0[30] = uart_txd;
+  assign uart_rxd = GPIO_0[32];
 `endif
 
 `ifdef USE_AUDIO
-
   wire          clka;
   reg           reseta;
   reg           reseta1;
@@ -152,16 +175,9 @@ module top
       reseta1 <= ~pll_locked;
       reseta <= reseta1;
     end
-
-`else
-
-  assign GPIO_1[33] = 1'bz;
-  assign GPIO_1[35] = 1'bz;
-
 `endif
 
 `ifdef USE_VGA
-
   wire          clkv;
   reg           resetv;
   reg           resetv1;
@@ -178,11 +194,9 @@ module top
       resetv1 <= ~pll_locked;
       resetv <= resetv1;
     end
-
 `endif
 
 `ifdef USE_HEX_LED
-
   wire [23:0]    hex_led;
   assign HEX5 = get_hex(hex_led[23:20]);
   assign HEX4 = get_hex(hex_led[19:16]);
@@ -217,9 +231,7 @@ module top
       endcase
     end
   endfunction
-
 `else
-
   // turn off hex leds
   assign HEX0 = 7'b1111111;
   assign HEX1 = 7'b1111111;
@@ -227,8 +239,6 @@ module top
   assign HEX3 = 7'b1111111;
   assign HEX4 = 7'b1111111;
   assign HEX5 = 7'b1111111;
-
 `endif
-
 
 endmodule

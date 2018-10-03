@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -13,9 +13,10 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-//`include "../topinclude.v"
-`define USE_UART
 `default_nettype none
+`define USE_UART
+`define USE_TIMER
+`define USE_I2C
 
 module bemicro_max10_start
   (
@@ -26,17 +27,23 @@ module bemicro_max10_start
    output       GPIO_J4_35,
    input        GPIO_J4_37,
 `endif
+`ifdef USE_I2C
+   // I2C
+   inout        I2C_SCL,
+   inout        I2C_SDA,
+`endif
    input [3:0]  PB
    );
 
   localparam UART_CLK_HZ = 40000000;
   localparam UART_SCLK_HZ = 115200;
   localparam UART_COUNTER_WIDTH = 9;
+  localparam I2C_CLK_HZ = 40000000;
+  localparam I2C_SCLK_HZ = 100000;
   localparam WIDTH_D = 32;
   // for small FPGAs
   localparam DEPTH_I = 10;
-  localparam DEPTH_D = 10;
-  localparam DEPTH_V = 15;
+  localparam DEPTH_D = 9;
 
   // LED
   wire [7:0]    led;
@@ -78,6 +85,8 @@ module bemicro_max10_start
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
       .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
+      .I2C_CLK_HZ (I2C_CLK_HZ),
+      .I2C_SCLK_HZ (I2C_SCLK_HZ),
       .WIDTH_D (WIDTH_D),
       .DEPTH_I (DEPTH_I),
       .DEPTH_D (DEPTH_D)
@@ -103,6 +112,10 @@ module bemicro_max10_start
      .vga_g (VGA_G_in),
      .vga_b (VGA_B_in),
 `endif
+`ifdef USE_I2C
+     .i2c_scl (I2C_SCL),
+     .i2c_sda (I2C_SDA),
+`endif
      .clk (clk),
      .reset (reset),
      .led (led)
@@ -113,8 +126,8 @@ module bemicro_max10_start
   // uart
   wire          uart_txd;
   wire          uart_rxd;
-  assign GPIO_J4_38 = uart_txd;
-  assign uart_rxd = GPIO_J4_40;
+  assign GPIO_J4_35 = uart_txd;
+  assign uart_rxd = GPIO_J4_37;
 
 `endif
 

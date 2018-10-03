@@ -6,8 +6,6 @@
 #define BAUDRATE B115200
 #define SC1_START_CHAR 0xaa
 #define SC1_END_CHAR 0x55
-#define SC1_CODE_ADDR 0x4000
-#define SC1_DATA_ADDR 0x0000
 
 int uart_open(char *device_name);
 void uart_read(int uart, uint8_t *buf, size_t count);

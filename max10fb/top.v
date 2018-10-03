@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2017, miya
+  Copyright (c) 2016-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -13,6 +13,7 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+`default_nettype none
 `define USE_UART
 
 module top
@@ -32,8 +33,7 @@ module top
   localparam WIDTH_D = 32;
   // for small FPGAs
   localparam DEPTH_I = 10;
-  localparam DEPTH_D = 10;
-  localparam DEPTH_V = 15;
+  localparam DEPTH_D = 9;
 
   wire clk_pll;
   wire [WIDTH_D-1:0] led;

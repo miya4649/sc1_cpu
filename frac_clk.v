@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016 miya
+  Copyright (c) 2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -13,28 +13,60 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-module rw_port_ram
+// factor_mul < factor_div
+// COUNTER_BITS > factor_mul,div bits + 1
+
+module frac_clk
   #(
-    parameter DATA_WIDTH=8,
-    parameter ADDR_WIDTH=12
+    parameter COUNTER_BITS = 4
     )
   (
-   input                         clk,
-   input [(ADDR_WIDTH-1):0]      addr_r,
-   input [(ADDR_WIDTH-1):0]      addr_w,
-   input [(DATA_WIDTH-1):0]      data_in,
-   input                         we,
-   output reg [(DATA_WIDTH-1):0] data_out
+   input                           clk,
+   input                           reset,
+   input signed [COUNTER_BITS-1:0] factor_mul,
+   input signed [COUNTER_BITS-1:0] factor_div,
+   output reg                      en
    );
 
-  reg [DATA_WIDTH-1:0]           ram [0:(1 << ADDR_WIDTH)-1];
+  localparam TRUE = 1'b1;
+  localparam FALSE = 1'b0;
+  localparam ONE = 1'd1;
+  localparam ZERO = 1'd0;
+  localparam SZERO = 1'sd0;
+
+  // clock counter
+  reg signed [COUNTER_BITS-1:0] counter_mul;
+  reg signed [COUNTER_BITS-1:0] counter_div;
+  always @(posedge clk)
+    begin
+      if (reset == TRUE)
+        begin
+          counter_mul <= ZERO;
+        end
+      else
+        begin
+          counter_mul <= counter_mul + factor_mul;
+        end
+    end
 
   always @(posedge clk)
     begin
-      data_out <= ram[addr_r];
-      if (we)
+      if (reset == TRUE)
         begin
-          ram[addr_w] <= data_in;
+          counter_div <= ZERO;
+          en <= FALSE;
+        end
+      else
+        begin
+          if (counter_mul - counter_div > SZERO)
+            begin
+              counter_div <= counter_div + factor_div;
+              en <= TRUE;
+            end
+          else
+            begin
+              en <= FALSE;
+            end
         end
     end
 

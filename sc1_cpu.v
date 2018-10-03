@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015-2018, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -231,7 +231,10 @@ module sc1_cpu
         I_SR:    result = source_a >> source_b;
         I_SL:    result = source_a << source_b;
         I_SRA:   result = $signed(source_a) >>> source_b;
+`ifdef DISABLE_MUL
+`else
         I_MUL:   result = $signed(source_a) * $signed(source_b);
+`endif
         default: result = ZERO;
       endcase
     end
