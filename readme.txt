@@ -1,16 +1,6 @@
 シンプルなCPU（メモリアクセスが速いタイプ）の実装です。
-使用方法は下記のサイトを参照してください。
+使用方法、最新版は下記のサイトを参照してください。
 http://cellspe.matrix.jp/zerofpga/sc1_cpu.html
-
-* 更新情報
-
-** 2018/10/03
-*** DE0-CVのUARTのピン配置を変更しました。
-UART_TXD: GPIO-1の2番ピン→GPIO-0の35番ピン
-UART_RXD: GPIO-1の4番ピン→GPIO-0の37番ピン
-UART_GND: GPIO-1の12番ピン→GPIO-0の30番ピン
-*** I2Cバスに対応しました。
-*** TinyFPGA BXボードに対応しました。
 
 * ターゲットボードについて
 
