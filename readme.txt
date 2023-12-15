@@ -53,7 +53,7 @@ sc1_cpu/patches/readme_patches.txt
 ここではFPGAのビットストリーム転送までを解説します。
 SC1-CPU用のプログラムを動かすためには後述のUARTの設定が必要です。
 
-●Terasic DE0-CV、BeMicro Max 10、BeMicro CV A9の場合
+** Terasic DE0-CV、BeMicro Max 10、BeMicro CV A9の場合
 Quartus Primeは「AlteraのFPGA開発ツール「Quartus Prime」をUbuntuにインストールする」の方法でインストールしているものとします。
 ターミナルで、
 
@@ -66,12 +66,12 @@ Terasic DE0-CV: sc1_cpu/de0-cv/de0-cv_start.qpf
 BeMicro Max 10: sc1_cpu/bemicro_max10/bemicro_max10_start.qpf
 BeMicro CV A9: sc1_cpu/bemicro_cva9/bemicro_cva9_start.qpf
 
-●MAX10-FB基板 の場合
+** MAX10-FB基板 の場合
 MAX10-JB基板は初期状態ではWindows環境でしか仕様できない設定になっているため、まず「FPGA電子工作スーパーキット・サポートサイト」に書かれている方法でアップデートしてLinuxに対応させる必要があります。（もしくは書き込み時のみWindowsを使います。）
 
 Quartus Ver.15.0以上 でプロジェクトファイル sc1_cpu/max10fb/max10fb_start.qpfを開いて「Start Compilation」、「Programmer」で転送して実行します。
 
-●iCE40HX-8K(開発環境: IceStorm)の場合
+** iCE40HX-8K(開発環境: IceStorm)の場合
 オープンソースの開発環境IceStormでコンパイル、転送します。
 詳しくは sc1_cpu/ice40hx8k/readme_icestorm.txt を参照してください。
 

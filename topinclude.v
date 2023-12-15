@@ -1,5 +1,3 @@
-`default_nettype none
-
 `define USE_UART
 //`define USE_ROM_LOADER
 //`define USE_INIT_RAM

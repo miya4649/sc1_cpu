@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -14,45 +14,45 @@
 */
 
 module vga_iface
+  #(
+    parameter VGA_MAX_H = 1650-1,
+    parameter VGA_MAX_V = 750-1,
+    parameter VGA_WIDTH = 1280,
+    parameter VGA_HEIGHT = 720,
+    parameter VGA_SYNC_H_START = 1390,
+    parameter VGA_SYNC_V_START = 725,
+    parameter VGA_SYNC_H_END = 1430,
+    parameter VGA_SYNC_V_END = 730,
+    parameter PIXEL_DELAY = 9,
+    parameter BPP = 8
+    )
   (
-   input                    clk,
-   input                    reset,
-
-   output                   vsync,
-   output signed [32-1 : 0] vcount,
-   input                    ext_clkv,
-   input                    ext_resetv,
-   input signed [8-1 : 0]   ext_color,
-   output                   ext_vga_hs,
-   output                   ext_vga_vs,
-   output                   ext_vga_de,
-   output signed [8-1 : 0]  ext_vga_r,
-   output signed [8-1 : 0]  ext_vga_g,
-   output signed [8-1 : 0]  ext_vga_b,
-   output signed [32-1 : 0] ext_count_h,
-   output signed [32-1 : 0] ext_count_v
+   input wire            clk,
+   input wire            reset,
+   output wire           vsync,
+   output wire [31:0]    vcount,
+   input wire            ext_clkv,
+   input wire            ext_resetv,
+   input wire [BPP-1:0]  ext_color_in,
+   output wire           ext_vga_hs,
+   output wire           ext_vga_vs,
+   output wire           ext_vga_de,
+   output wire [BPP-1:0] ext_vga_color_out,
+   output wire [31:0]    ext_count_h,
+   output wire [31:0]    ext_count_v
    );
 
-  localparam VGA_MAX_H = 800-1;
-  localparam VGA_MAX_V = 525-1;
-  localparam VGA_WIDTH = 640;
-  localparam VGA_HEIGHT = 480;
-  localparam VGA_SYNC_H_START = 656;
-  localparam VGA_SYNC_V_START = 490;
-  localparam VGA_SYNC_H_END = 752;
-  localparam VGA_SYNC_V_END = 492;
-  localparam DOT_BITS = 8;
-  localparam LINE_BITS = 10;
-  localparam PIXEL_DELAY = 7;
+  localparam H_BITS = $clog2(VGA_MAX_H + 2);
+  localparam V_BITS = $clog2(VGA_MAX_V + 2);
 
-  reg [LINE_BITS-1:0]       count_h;
-  reg [LINE_BITS-1:0]       count_v;
-  wire                      vga_hs;
-  wire                      vga_vs;
-  wire                      pixel_valid;
-  wire                      vga_hs_delay;
-  wire                      vga_vs_delay;
-  wire                      pixel_valid_delay;
+  reg [H_BITS-1:0] count_h;
+  reg [V_BITS-1:0] count_v;
+  wire             vga_hs;
+  wire             vga_vs;
+  wire             pixel_valid;
+  wire             vga_hs_delay;
+  wire             vga_vs_delay;
+  wire             pixel_valid_delay;
 
   // H counter
   always @(posedge ext_clkv)
@@ -105,76 +105,67 @@ module vga_iface
   assign pixel_valid = ((count_h < VGA_WIDTH) && (count_v < VGA_HEIGHT)) ? 1'b1 : 1'b0;
 
   // ext out
-  assign ext_vga_r = pixel_valid_delay ? {ext_color[7:5], 1'b0} : 4'd0;
-  assign ext_vga_g = pixel_valid_delay ? {ext_color[4:2], 1'b0} : 4'd0;
-  assign ext_vga_b = pixel_valid_delay ? {ext_color[1:0], 2'b0} : 4'd0;
+  assign ext_vga_color_out = pixel_valid_delay ? ext_color_in : {BPP{1'b0}};
   assign ext_vga_hs = vga_hs_delay;
   assign ext_vga_vs = vga_vs_delay;
   assign ext_vga_de = pixel_valid_delay;
   assign ext_count_h = count_h;
   assign ext_count_v = count_v;
 
-
   cdc_synchronizer
     #(
-      .DATA_WIDTH (1)
+      .DATA_WIDTH (V_BITS)
       )
-  sync_vsync
+  cdc_synchronizer_vcount
     (
-     .clk_in (ext_clkv),
-     .clk_out (clk),
-     .data_in (ext_vga_vs),
-     .data_out (vsync),
-     .reset_in (ext_resetv)
-     );
-
-  cdc_synchronizer
-    #(
-      .DATA_WIDTH (32)
-      )
-  sync_vcount
-    (
-     .clk_in (ext_clkv),
-     .clk_out (clk),
      .data_in (count_v),
      .data_out (vcount),
-     .reset_in (ext_resetv)
+     .clk (clk),
+     .reset (reset)
      );
 
-  shift_register_vector
+  shift_register
     #(
-      .WIDTH (1),
-      .DEPTH (PIXEL_DELAY)
+      .DELAY (2)
       )
-  shift_register_vector_vga_hs
+  shift_register_vsync
     (
-     .clk (ext_clkv),
-     .data_in (vga_hs),
-     .data_out (vga_hs_delay)
+     .clk (clk),
+     .din (ext_vga_vs),
+     .dout (vsync)
      );
 
-  shift_register_vector
+  shift_register
     #(
-      .WIDTH (1),
-      .DEPTH (PIXEL_DELAY)
+      .DELAY (PIXEL_DELAY)
       )
-  shift_register_vector_vga_vs
+  shift_register_vga_hs
     (
      .clk (ext_clkv),
-     .data_in (vga_vs),
-     .data_out (vga_vs_delay)
+     .din (vga_hs),
+     .dout (vga_hs_delay)
      );
 
-  shift_register_vector
+  shift_register
     #(
-      .WIDTH (1),
-      .DEPTH (PIXEL_DELAY)
+      .DELAY (PIXEL_DELAY)
       )
-  shift_register_vector_pixel_valid
+  shift_register_vga_vs
     (
      .clk (ext_clkv),
-     .data_in (pixel_valid),
-     .data_out (pixel_valid_delay)
+     .din (vga_vs),
+     .dout (vga_vs_delay)
+     );
+
+  shift_register
+    #(
+      .DELAY (PIXEL_DELAY)
+      )
+  shift_register_pixel_valid
+    (
+     .clk (ext_clkv),
+     .din (pixel_valid),
+     .dout (pixel_valid_delay)
      );
 
 endmodule

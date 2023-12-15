@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016, miya
+  Copyright (c) 2016 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -18,29 +18,27 @@ module sprite
     parameter SPRITE_SIZE_BITS = 6
     )
   (
-   input                     clk,
-   input                     reset,
+   input wire         clk,
+   input wire         reset,
 
-   output signed [32-1:0]    bitmap_length,
-   input signed [32-1:0]     bitmap_address,
-   input signed [8-1:0]      bitmap_din,
-   output signed [8-1:0]     bitmap_dout,
-   input                     bitmap_we,
-   input                     bitmap_oe,
+   output wire [31:0] bitmap_length,
+   input wire [31:0]  bitmap_address,
+   input wire [7:0]   bitmap_din,
+   output wire [7:0]  bitmap_dout,
+   input wire         bitmap_we,
+   input wire         bitmap_oe,
 
-   input signed [32-1:0]     x,
-   input signed [32-1:0]     y,
-   input signed [32-1:0]     scale,
+   input wire [31:0]  x,
+   input wire [31:0]  y,
+   input wire [31:0]  scale,
 
-   input                     ext_clkv,
-   input                     ext_resetv,
-   output reg signed [8-1:0] ext_color,
-   input signed [32-1:0]     ext_count_h,
-   input signed [32-1:0]     ext_count_v
+   input wire         ext_clkv,
+   input wire         ext_resetv,
+   output wire [7:0]  ext_color,
+   input wire [31:0]  ext_count_h,
+   input wire [31:0]  ext_count_v
    );
 
-  localparam VGA_WIDTH = 640;
-  localparam VGA_HEIGHT = 480;
   localparam BPP = 8;
   localparam OFFSET_BITS = 16;
   localparam ADDR_BITS = (SPRITE_SIZE_BITS * 2);
@@ -53,28 +51,27 @@ module sprite
   assign bitmap_length = 1 << ADDR_BITS;
   assign bitmap_dout = 1'd0;
 
-  // inside the sprite
+  // sprite logic
+  reg [BPP-1:0]       color;
+  reg [ADDR_BITS-1:0] bitmap_raddr_d3;
+  wire [BPP-1:0]      bitmap_color_d5;
+  wire [OFFSET_BITS-1:0] x_sync;
+  wire [OFFSET_BITS-1:0] y_sync;
+  wire [SCALE_BITS_BITS-1:0] scale_sync;
+  reg [SCALE_BITS_BITS-1:0]  scale_sync_d1;
+  reg [BPP-1:0]              color_d6;
   wire                       vp_sprite_inside_d2;
-  wire                       vp_sprite_inside_d4;
+  wire                       vp_sprite_inside_d5;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dx0_d1;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dy0_d1;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dx1_d2;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dy1_d2;
+  
+  // inside the sprite
   assign vp_sprite_inside_d2 = ((dx1_d2 >= 0) &&
                                 (dx1_d2 < SPRITE_SIZE) &&
                                 (dy1_d2 >= 0) &&
                                 (dy1_d2 < SPRITE_SIZE));
-
-  // sprite logic
-  reg [BPP-1:0]              color;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dx0_d1;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dy0_d1;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dx1_d2;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dy1_d2;
-  reg [ADDR_BITS-1:0]                     bitmap_raddr_d3;
-  wire [BPP-1:0]                          bitmap_color_d4;
-  wire signed [OFFSET_BITS-1:0]           x_sync;
-  wire signed [OFFSET_BITS-1:0]           y_sync;
-  wire [SCALE_BITS_BITS-1:0]              scale_sync;
-  reg [SCALE_BITS_BITS-1:0]               scale_sync_d1;
-  reg signed [BPP-1:0]                    color_d5;
-  reg signed [BPP-1:0]                    color_d6;
 
   always @(posedge ext_clkv)
     begin
@@ -84,9 +81,7 @@ module sprite
       dx1_d2 <= (dx0_d1 << scale_sync_d1) >> SCALE_DIV_BITS;
       dy1_d2 <= (dy0_d1 << scale_sync_d1) >> SCALE_DIV_BITS;
       bitmap_raddr_d3 <= (dy1_d2[SPRITE_SIZE_BITS-1:0] << SPRITE_SIZE_BITS) + dx1_d2[SPRITE_SIZE_BITS-1:0];
-      color_d5 <= vp_sprite_inside_d4 ? bitmap_color_d4 : 1'd0;
-      color_d6 <= color_d5;
-      ext_color <= color_d6; // ext_color: delay 7
+      color_d6 <= vp_sprite_inside_d5 ? bitmap_color_d5 : 1'd0;
     end
 
   // bitmap
@@ -103,7 +98,7 @@ module sprite
      .we (bitmap_we),
      .read_clock (ext_clkv),
      .write_clock (clk),
-     .data_out (bitmap_color_d4)
+     .data_out (bitmap_color_d5)
      );
 
   cdc_synchronizer
@@ -112,11 +107,10 @@ module sprite
       )
   cdc_synchronizer_x
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (x[OFFSET_BITS-1:0]),
      .data_out (x_sync),
-     .reset_in (reset)
+     .reset (ext_resetv)
      );
 
   cdc_synchronizer
@@ -125,11 +119,10 @@ module sprite
       )
   cdc_synchronizer_y
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (y[OFFSET_BITS-1:0]),
      .data_out (y_sync),
-     .reset_in (reset)
+     .reset (ext_resetv)
      );
 
   cdc_synchronizer
@@ -138,23 +131,35 @@ module sprite
       )
   cdc_synchronizer_scale
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (scale[SCALE_BITS-1:0]),
      .data_out (scale_sync),
-     .reset_in (reset)
+     .reset (ext_resetv)
      );
 
   shift_register_vector
     #(
       .WIDTH (1),
-      .DEPTH (2)
+      .DEPTH (3)
       )
-  shift_register_vector_vp_sprite_inside_d4
+  shift_register_vector_vp_sprite_inside_d5
     (
      .clk (ext_clkv),
      .data_in (vp_sprite_inside_d2),
-     .data_out (vp_sprite_inside_d4)
+     .data_out (vp_sprite_inside_d5)
+     );
+
+  // ext_color: delay 9
+  shift_register_vector
+    #(
+      .WIDTH (BPP),
+      .DEPTH (3)
+      )
+  shift_register_vector_ext_color
+    (
+     .clk (ext_clkv),
+     .data_in (color_d6),
+     .data_out (ext_color)
      );
 
 endmodule

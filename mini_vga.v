@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016,2018, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -14,7 +14,7 @@
 */
 
 // FACTOR MUL:DIV = (video_clock / scale_h):clk
-// ex. (25.2MHz / 4):16MHz = 21:53
+// ex. (25.2MHz / 4) * 2:16MHz = 42:53
 // COUNTER_BITS >= factor_mul,div bits + 1
 
 module mini_vga
@@ -37,24 +37,25 @@ module mini_vga
     parameter VGA_SYNC_V_END = 492,
     parameter LINE_BITS = 10,
     parameter COUNTER_BITS = 7,
-    parameter BPP = 3
+    parameter BPP = 3,
+    parameter ENABLE_FRAC_CLK = 0
     )
   (
-   input                            clk,
-   input                            reset,
-
-   input signed [COUNTER_BITS-1:0]  ext_factor_mul,
-   input signed [COUNTER_BITS-1:0]  ext_factor_div,
-   input signed [LINE_BITS-1:0]     scale_h,
-   output                           vsync,
-   output signed [32-1 : 0]         vcount,
-   input signed [BPP-1 : 0]  ext_color,
-   output                           ext_vga_hs,
-   output                           ext_vga_vs,
-   output                           ext_vga_de,
-   output signed [BPP-1 : 0] ext_vga_color,
-   output signed [32-1 : 0]         ext_count_h,
-   output signed [32-1 : 0]         ext_count_v
+   input wire                           clk,
+   input wire                           reset,
+   input wire signed [COUNTER_BITS-1:0] ext_factor_mul,
+   input wire signed [COUNTER_BITS-1:0] ext_factor_div,
+   input wire signed [LINE_BITS-1:0]    scale_h,
+   output wire                          vsync,
+   output wire signed [32-1 : 0]        vcount,
+   input wire signed [BPP-1 : 0]        ext_color,
+   output wire                          ext_vga_hs,
+   output wire                          ext_vga_vs,
+   output wire                          ext_vga_de,
+   output wire                          ext_vga_clk,
+   output wire signed [BPP-1 : 0]       ext_vga_color,
+   output wire signed [32-1 : 0]        ext_count_h,
+   output wire signed [32-1 : 0]        ext_count_v
    );
 
   localparam TRUE = 1'b1;
@@ -72,6 +73,10 @@ module mini_vga
   wire                vga_vs_delay;
   wire                pixel_valid_delay;
   wire                en;
+  wire                frac_clk_en;
+  wire                frac_clk_out;
+
+  assign en = ENABLE_FRAC_CLK ? frac_clk_en : TRUE;
 
   // H counter
   always @(posedge clk)
@@ -150,7 +155,8 @@ module mini_vga
      .reset (reset),
      .factor_mul (ext_factor_mul),
      .factor_div (ext_factor_div),
-     .en (en)
+     .clk_out (frac_clk_out),
+     .en (frac_clk_en)
    );
 
   shift_register_vector
@@ -187,6 +193,18 @@ module mini_vga
      .clk (clk),
      .data_in (pixel_valid),
      .data_out (pixel_valid_delay)
+     );
+
+  shift_register_vector
+    #(
+      .WIDTH (1),
+      .DEPTH (PIXEL_DELAY)
+      )
+  shift_register_vector_frac_clk_out
+    (
+     .clk (clk),
+     .data_in (frac_clk_out),
+     .data_out (ext_vga_clk)
      );
 
 endmodule

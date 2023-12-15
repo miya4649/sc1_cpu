@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -17,26 +17,25 @@ module cdc_fifo
   #(
     parameter DATA_WIDTH = 8,
     parameter ADDR_WIDTH = 4,
-    parameter MAX_ITEMS = 13 // MAX_ITEMS < ((1 << ADDR_WIDTH) - 3)
+    parameter MAX_ITEMS = 10 // MAX_ITEMS < ((1 << ADDR_WIDTH) - 5)
     )
   (
    // -------- clock domain: read  --------
-   input                   clk_cr,
-   input                   reset_cr,
-   output [DATA_WIDTH-1:0] data_cr,
-   input                   req_cr,
-   output                  empty_cr,
-   output reg              valid_cr,
+   input wire                   clk_cr,
+   input wire                   reset_cr,
+   output wire [DATA_WIDTH-1:0] data_cr,
+   input wire                   req_cr,
+   output reg                   empty_cr,
+   output reg                   valid_cr,
    // -------- clock domain: write --------
-   input                   clk_cw,
-   input                   reset_cw,
-   input [DATA_WIDTH-1:0]  data_cw,
-   input                   we_cw,
-   output                  full_cw,
-   output                  almost_full_cw
+   input wire                   clk_cw,
+   input wire                   reset_cw,
+   input wire [DATA_WIDTH-1:0]  data_cw,
+   input wire                   we_cw,
+   output reg                   almost_full_cw
    );
 
-  localparam SYNC_DEPTH = 3;
+  localparam SYNC_DEPTH = 4;
   localparam ZERO = 1'd0;
   localparam ONE = 1'd1;
   localparam TRUE = 1'b1;
@@ -69,10 +68,20 @@ module cdc_fifo
   // -------- clock domain: read  --------
   reg  [ADDR_WIDTH-1:0] addr_r_cr;
   reg [ADDR_WIDTH-1:0]  addr_r_gray_cr;
-  wire [ADDR_WIDTH-1:0] addr_r_next_cr;
+  reg [ADDR_WIDTH-1:0]  addr_r_next_cr;
   wire [ADDR_WIDTH-1:0] addr_w_sync_cr;
-  assign addr_r_next_cr = addr_r_cr + ONE;
-  assign empty_cr = (addr_r_gray_cr == addr_w_sync_cr) ? TRUE : FALSE;
+  wire                  empty;
+  reg                   req_cr_d1;
+  reg                   empty_d1;
+
+  assign empty = (addr_r_gray_cr == addr_w_sync_cr) ? TRUE : FALSE;
+
+  always @(posedge clk_cr)
+    begin
+      req_cr_d1 <= req_cr;
+      empty_d1 <= empty;
+      empty_cr <= empty_d1;
+    end
 
   always @(posedge clk_cr)
     begin
@@ -80,13 +89,29 @@ module cdc_fifo
         begin
           addr_r_cr <= ZERO;
           addr_r_gray_cr <= ZERO;
+          addr_r_next_cr <= ONE;
         end
       else
         begin
-          if ((req_cr == TRUE) && (empty_cr == FALSE))
+          if ((req_cr == TRUE) && (empty == FALSE))
             begin
               addr_r_cr <= addr_r_next_cr;
               addr_r_gray_cr <= bin2gray(addr_r_next_cr);
+              addr_r_next_cr <= addr_r_next_cr + ONE;
+            end
+        end
+    end
+
+  always @(posedge clk_cr)
+    begin
+      if (reset_cr == TRUE)
+        begin
+          valid_cr <= FALSE;
+        end
+      else
+        begin
+          if ((req_cr_d1 == TRUE) && (empty_d1 == FALSE))
+            begin
               valid_cr <= TRUE;
             end
           else
@@ -97,36 +122,37 @@ module cdc_fifo
     end
 
   // -------- clock domain: write --------
-  reg  [ADDR_WIDTH-1:0] addr_w_cw;
-  wire [ADDR_WIDTH-1:0] addr_w_next_gray_cw;
-  wire [ADDR_WIDTH-1:0] addr_w_next_cw;
   wire [ADDR_WIDTH-1:0] addr_r_sync_cw;
+  reg [ADDR_WIDTH-1:0]  addr_w_cw;
+  reg [ADDR_WIDTH-1:0]  addr_w_next_gray_cw;
+  reg [ADDR_WIDTH-1:0]  addr_w_next_cw;
   reg [ADDR_WIDTH-1:0]  addr_w_gray_cw;
-  assign addr_w_next_cw = addr_w_cw + ONE;
-  assign full_cw = (addr_w_next_gray_cw == addr_r_sync_cw) ? TRUE : FALSE;
-  assign addr_w_next_gray_cw = bin2gray(addr_w_next_cw);
-
-  wire [ADDR_WIDTH-1:0] addr_r_sync_bin_cw;
-  wire [ADDR_WIDTH-1:0] item_count;
-  assign addr_r_sync_bin_cw = gray2bin(addr_r_sync_cw);
-  assign item_count = addr_w_cw - addr_r_sync_bin_cw;
-  assign almost_full_cw = (item_count > MAX_ITEMS) ? TRUE : FALSE;
+  reg [ADDR_WIDTH-1:0]  addr_r_sync_bin_cw;
+  reg [ADDR_WIDTH-1:0]  item_count;
 
   always @(posedge clk_cw)
     begin
       if (reset_cw == TRUE)
         begin
           addr_w_cw <= ZERO;
+          addr_w_next_cw <= ONE;
           addr_w_gray_cw <= ZERO;
         end
       else
-        begin
-          if (we_cw == TRUE)
-            begin
-              addr_w_cw <= addr_w_next_cw;
-              addr_w_gray_cw <= addr_w_next_gray_cw;
-            end
-        end
+        if (we_cw == TRUE)
+          begin
+            addr_w_cw <= addr_w_next_cw;
+            addr_w_next_cw <= addr_w_next_cw + ONE;
+            addr_w_gray_cw <= addr_w_next_gray_cw;
+          end
+    end
+
+  always @(posedge clk_cw)
+    begin
+      addr_w_next_gray_cw <= bin2gray(addr_w_next_cw);
+      addr_r_sync_bin_cw <= gray2bin(addr_r_sync_cw);
+      item_count <= addr_w_cw - addr_r_sync_bin_cw;
+      almost_full_cw <= (item_count > MAX_ITEMS) ? TRUE : FALSE;
     end
 
   shift_register_vector

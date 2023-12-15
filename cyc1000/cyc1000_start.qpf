@@ -1,0 +1,3 @@
+QUARTUS_VERSION = "18.0"
+DATE = "00:00:00  August 23, 2018"
+PROJECT_REVISION = "cyc1000_start"

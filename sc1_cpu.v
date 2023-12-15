@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2018, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -23,13 +23,13 @@ module sc1_cpu
     parameter DEPTH_REG = 4
     )
   (
-   input                    clk,
-   input                    reset,
-   input                    resume,
-   input [WIDTH_I-1:0]      mem_i_r,
+   input wire               clk,
+   input wire               reset,
+   input wire               resume,
+   input wire [WIDTH_I-1:0] mem_i_r,
    output reg [DEPTH_I-1:0] mem_i_addr_r,
-   input [WIDTH_D-1:0]      mem_d_r_a,
-   input [WIDTH_D-1:0]      mem_d_r_b,
+   input wire [WIDTH_D-1:0] mem_d_r_a,
+   input wire [WIDTH_D-1:0] mem_d_r_b,
    output reg [WIDTH_D-1:0] mem_d_w,
    output reg [DEPTH_D-1:0] mem_d_addr_w,
    output reg [DEPTH_D-1:0] mem_d_addr_r_a,

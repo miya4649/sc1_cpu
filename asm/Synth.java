@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017-2018, miya
+  Copyright (c) 2017 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -45,6 +45,7 @@ public class Synth extends AsmLib
   private static final int MOD_LEVEL_MAX = ((int)(FIXED_SCALE * 0.52));
   private static final int SCALE_TABLE_SIZE = 16;
   private static final int SAMPLE_RATE = 48000;
+  ///private static final int SAMPLE_RATE = 44100;
   private static final int SEQ_CH = 4;
   private static final int SEQ_LENGTH = 16;
   private static final int SEQ_INIT_NUM = 20;
@@ -53,6 +54,8 @@ public class Synth extends AsmLib
   private static final int CHORD_LENGTH = 3;
   private static final int VIS_MAX_X = 40;
   private static final int VIS_MAX_Y = 30;
+  /// for kv260
+  ///private static final int VIS_MAX_Y = 22;
   private static final int VIS_NEXT_LINE = 64;
   private static final int DEFAULT_VOLUME = (int)(FIXED_SCALE / ((SEQ_CH / 2.0) + 2.0));
 
@@ -906,6 +909,8 @@ public class Synth extends AsmLib
     as_add(SP_REG_MVI,reg_im(0),reg_im(0), AM_SET,AM_REG,AM_REG);
     as_add(1,reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     as_add(2,reg_im(4),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    /// for kv260
+    ///as_add(2,reg_im(3),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
 
     // init parameter
     lib_set_im32(addr_struct("d_vis_param"));
@@ -1200,8 +1205,8 @@ public class Synth extends AsmLib
     ctrlParam.add("MOD_LEVEL_MAX", (int)(FIXED_SCALE * 0.52));
     ctrlParam.add("reverbBufferL", MEM_S_ADDRESS + 0x0000);
     ctrlParam.add("reverbBufferR", MEM_S_ADDRESS + 0x6000);
-    ctrlParam.add("reverbSizeL", 0x5e31);
-    ctrlParam.add("reverbSizeR", 0x9ff0);
+    ctrlParam.add("reverbSizeL", (int)(0x5e31 / 48000.0 * SAMPLE_RATE));
+    ctrlParam.add("reverbSizeR", (int)(0x9ff0 / 48000.0 * SAMPLE_RATE));
     ctrlParam.add("reverbAddrL", 0);
     ctrlParam.add("reverbAddrR", 0);
     ctrlParam.add("reverbDecay", (int)(FIXED_SCALE * 0.7));
@@ -1221,7 +1226,7 @@ public class Synth extends AsmLib
     seqParam.add("length", SEQ_LENGTH);
     seqParam.add("sizeOfNoteParam", 0);
     seqParam.add("callbackCounter", 0);
-    seqParam.add("callbackRate", 8000);
+    seqParam.add("callbackRate", (int)(8000 / 48000.0 * SAMPLE_RATE));
     seqParam.add("beat", 0);
     seqParam.add("seqDataStart", 0);
     seqParam.add("seqDataEnd", 0);

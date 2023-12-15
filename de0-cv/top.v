@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2018, miya
+  Copyright (c) 2016 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -50,7 +50,6 @@ module top
 
   localparam UART_CLK_HZ = 50000000;
   localparam UART_SCLK_HZ = 115200;
-  localparam UART_COUNTER_WIDTH = 9;
   localparam I2C_CLK_HZ = 50000000;
   localparam I2C_SCLK_HZ = 100000;
   localparam WIDTH_D = 32;
@@ -115,7 +114,6 @@ module top
     #(
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
-      .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
       .I2C_CLK_HZ (I2C_CLK_HZ),
       .I2C_SCLK_HZ (I2C_SCLK_HZ),
       .WIDTH_D (WIDTH_D),
@@ -139,9 +137,7 @@ module top
      .resetv (resetv),
      .vga_hs (VGA_HS),
      .vga_vs (VGA_VS),
-     .vga_r (VGA_R_in),
-     .vga_g (VGA_G_in),
-     .vga_b (VGA_B_in),
+     .vga_color_out (VGA_COLOR_in),
 `endif
 `ifdef USE_I2C
      .i2c_scl (GPIO_0[31]),
@@ -182,12 +178,10 @@ module top
   reg           resetv;
   reg           resetv1;
   // truncate RGB data
-  wire [7:0]    VGA_R_in;
-  wire [7:0]    VGA_G_in;
-  wire [7:0]    VGA_B_in;
-  assign VGA_R = VGA_R_in[3:0];
-  assign VGA_G = VGA_G_in[3:0];
-  assign VGA_B = VGA_B_in[3:0];
+  wire [7:0]    VGA_COLOR_in;
+  assign VGA_R = {VGA_COLOR_in[7:5], VGA_COLOR_in[5]};
+  assign VGA_G = {VGA_COLOR_in[4:2], VGA_COLOR_in[2]};
+  assign VGA_B = {VGA_COLOR_in[1:0], {2{VGA_COLOR_in[0]}}};
 
   always @(posedge clkv)
     begin

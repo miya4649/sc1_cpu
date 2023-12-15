@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017, miya
+  Copyright (c) 2017 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -15,10 +15,10 @@
 
 module one_shot
   (
-   input  clk,
-   input  in,
-   output out_posedge,
-   output out_negedge
+   input wire  clk,
+   input wire  in,
+   output wire out_posedge,
+   output wire out_negedge
    );
 
   localparam TRUE = 1'b1;

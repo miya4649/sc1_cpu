@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -20,18 +20,18 @@
 
 module audio_output
   (
-   input        clk,
-   input        reset,
-   input [31:0] data,
+   input wire        clk,
+   input wire        reset,
+   input wire [31:0] data,
    // clock_divider = (audio_clk / sampling_rate) - 1
    // ex: (18MHz / 48000Hz) - 1 = 374
-   input [31:0] clock_divider,
-   input        valid_toggle,
-   output       full,
-   input        ext_audio_clk,
-   input        ext_audio_reset,
-   output       ext_audio_r,
-   output       ext_audio_l
+   input wire [31:0] clock_divider,
+   input wire        valid_toggle,
+   output wire       full,
+   input wire        ext_audio_clk,
+   input wire        ext_audio_reset,
+   output wire       ext_audio_r,
+   output wire       ext_audio_l
    );
 
   parameter FIFO_DEPTH_IN_BITS = 4;
@@ -123,7 +123,6 @@ module audio_output
      .reset_cw (reset),
      .data_cw (data_in),
      .we_cw (we_cw),
-     .full_cw (),
      .almost_full_cw (full)
      );
 

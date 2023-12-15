@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017-2018, miya
+  Copyright (c) 2017 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -337,9 +337,9 @@ public class Examples extends AsmLib
     lib_set_im(63);
     as_and(R9,R6,SP_REG_MVI, AM_SET,AM_REG,AM_REG);
     as_add(R9,R9,reg_im(1), AM_REG,AM_REG,AM_REG);
-    // color = nrand(8)
+    // color = nrand(256)
     lib_call("f_rand");
-    lib_set_im(7);
+    lib_set_im(255);
     as_and(R9,R6,SP_REG_MVI, AM_SET,AM_REG,AM_REG);
 
     // line
@@ -553,14 +553,14 @@ public class Examples extends AsmLib
   @Override
   public void program()
   {
-    example_counter();
+    //example_counter();
     //example_helloworld();
     //example_random();
     //example_memory_dump();
     //example_vram_fill();
     //example_ascii();
     //example_clear();
-    //example_line();
+    example_line();
     //example_timer();
     //example_i2c();
   }
@@ -572,7 +572,7 @@ public class Examples extends AsmLib
     //example_random_data();
     //example_ascii_data();
     //example_clear_data();
-    //example_line_data();
+    example_line_data();
     //example_timer_data();
     //example_i2c_data();
   }

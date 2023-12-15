@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016, miya
+  Copyright (c) 2023 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -13,7 +13,9 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// DEPTH >= 2
+/* shift_register_vector ver.2 */
+
+// DEPTH >= 1
 // Latency = DEPTH
 
 module shift_register_vector
@@ -22,18 +24,29 @@ module shift_register_vector
     parameter DEPTH = 3
     )
   (
-   input              clk,
-   input [WIDTH-1:0]  data_in,
-   output [WIDTH-1:0] data_out
+   input wire              clk,
+   input wire [WIDTH-1:0]  data_in,
+   output wire [WIDTH-1:0] data_out
    );
 
-  reg [WIDTH*DEPTH-1:0] s_reg;
-
-  always @(posedge clk)
-    begin
-      s_reg <= {s_reg[WIDTH*(DEPTH-1)-1:0], data_in};
-    end
-
-  assign data_out = s_reg[WIDTH*DEPTH-1:WIDTH*(DEPTH-1)];
+  generate
+    genvar i;
+    for (i = 0; i < DEPTH; i = i + 1)
+      begin: delay_gen
+        reg [WIDTH-1:0] temp_reg;
+        always @(posedge clk)
+          begin
+            if (i == DEPTH-1)
+              begin
+                delay_gen[i].temp_reg <= data_in;
+              end
+            else
+              begin
+                delay_gen[i].temp_reg <= delay_gen[i+1].temp_reg;
+              end
+          end
+      end
+    assign data_out = delay_gen[0].temp_reg;
+  endgenerate
 
 endmodule

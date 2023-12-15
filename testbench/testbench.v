@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2017, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -21,7 +21,7 @@ module testbench;
   localparam STEP  = 20; // 20 ns: 50MHz
   localparam STEPA = 56; // 56 ns: 18MHz
   localparam STEPV = 40; // 40 ns: 25MHz
-  localparam TICKS = 500000;
+  localparam TICKS = 5000000;
 
   localparam WIDTH_D = 32;
   localparam DEPTH_D = 12;
@@ -86,7 +86,7 @@ module testbench;
             $dumpvars(0, testbench.sc1_soc_0.mem_d.rw_port_ram_a.ram[i]);
             $dumpvars(0, testbench.sc1_soc_0.mem_i.ram[i]);
 `ifdef USE_VGA
-            $dumpvars(0, testbench.sc1_soc_0.sprite_0.dual_clk_ram_0.ram[i]);
+            $dumpvars(0, testbench.sc1_soc_0.sprite_0.dual_clk_ram_0.gen.ram[i]);
 `endif
           end
         for (i = 0; i < (1 << DEPTH_IO_REG); i = i + 1)
@@ -94,7 +94,7 @@ module testbench;
             $dumpvars(0, testbench.sc1_soc_0.io_reg_w[i]);
             $dumpvars(0, testbench.sc1_soc_0.io_reg_r[i]);
           end
-        $monitor("time: %d reset: %d led: %d", $time, reset, led);
+        $monitor("time: %d reset: %d led: %d vsync: %d", $time, reset, led, testbench.sc1_soc_0.vga_iface_0.vsync);
       end
 
   // generate clk
@@ -126,7 +126,6 @@ module testbench;
     #(
       .UART_CLK_HZ (CLK_HZ),
       .UART_SCLK_HZ (SCLK_HZ),
-      .UART_COUNTER_WIDTH (COUNTER_WIDTH),
       .WIDTH_D (WIDTH_D),
       .DEPTH_I (DEPTH_I),
       .DEPTH_D (DEPTH_D),
@@ -215,21 +214,70 @@ module testbench;
       uart_word(32'h00005002, 32'h00000000); // soc master
 
       // program start here --------
-      uart_word(32'h00004000, 32'h30040003);
-      uart_word(32'h00004001, 32'h00000004);
-      uart_word(32'h00004002, 32'h20080040);
-      uart_word(32'h00004003, 32'h1a080040);
-      uart_word(32'h00004004, 32'h00130003);
-      uart_word(32'h00004005, 32'h1c080040);
-      uart_word(32'h00004006, 32'h2061c846);
-      uart_word(32'h00004007, 32'h18684040);
-      uart_word(32'h00004008, 32'h00060003);
-      uart_word(32'h00004009, 32'h00000004);
-      uart_word(32'h0000400a, 32'h0000000a);
-      uart_word(32'h0000400b, 32'h00000001);
-      uart_word(32'h0000400c, 32'h00000001);
-      uart_word(32'h0000400d, 32'h00000001);
-
+      uart_word(32'h00004000, 32'h00000001);
+      uart_word(32'h00004001, 32'h00000003);
+      uart_word(32'h00004002, 32'h18000040);
+      uart_word(32'h00004003, 32'h00010003);
+      uart_word(32'h00004004, 32'h1c018040);
+      uart_word(32'h00004005, 32'h00030003);
+      uart_word(32'h00004006, 32'h20018040);
+      uart_word(32'h00004007, 32'h30010003);
+      uart_word(32'h00004008, 32'h00000004);
+      uart_word(32'h00004009, 32'h00000001);
+      uart_word(32'h0000400a, 32'h00000001);
+      uart_word(32'h0000400b, 32'h00618840);
+      uart_word(32'h0000400c, 32'h04619840);
+      uart_word(32'h0000400d, 32'h08819840);
+      uart_word(32'h0000400e, 32'h20000040);
+      uart_word(32'h0000400f, 32'h80000003);
+      uart_word(32'h00004010, 32'h00000004);
+      uart_word(32'h00004011, 32'h00000001);
+      uart_word(32'h00004012, 32'h00000001);
+      uart_word(32'h00004013, 32'h00000a81);
+      uart_word(32'h00004014, 32'h0fff0003);
+      uart_word(32'h00004015, 32'h0c018040);
+      uart_word(32'h00004016, 32'h00050003);
+      uart_word(32'h00004017, 32'h00000004);
+      uart_word(32'h00004018, 32'h10018040);
+      uart_word(32'h00004019, 32'hffff0003);
+      uart_word(32'h0000401a, 32'hffff0004);
+      uart_word(32'h0000401b, 32'h14018040);
+      uart_word(32'h0000401c, 32'h0000000b);
+      uart_word(32'h0000401d, 32'h00000001);
+      uart_word(32'h0000401e, 32'h00000001);
+      uart_word(32'h0000401f, 32'h00000001);
+      uart_word(32'h00004020, 32'h1c621040);
+      uart_word(32'h00004021, 32'h2081c040);
+      uart_word(32'h00004022, 32'h2081c040);
+      uart_word(32'h00004023, 32'h20010003);
+      uart_word(32'h00004024, 32'h00000004);
+      uart_word(32'h00004025, 32'h00000001);
+      uart_word(32'h00004026, 32'h00000001);
+      uart_word(32'h00004027, 32'h0001c205);
+      uart_word(32'h00004028, 32'hfff90003);
+      uart_word(32'h00004029, 32'hffff0004);
+      uart_word(32'h0000402a, 32'h00000008);
+      uart_word(32'h0000402b, 32'h00000001);
+      uart_word(32'h0000402c, 32'h00000001);
+      uart_word(32'h0000402d, 32'h00000001);
+      uart_word(32'h0000402e, 32'h20010003);
+      uart_word(32'h0000402f, 32'h00000004);
+      uart_word(32'h00004030, 32'h00000001);
+      uart_word(32'h00004031, 32'h00000001);
+      uart_word(32'h00004032, 32'h00018205);
+      uart_word(32'h00004033, 32'hfff90003);
+      uart_word(32'h00004034, 32'hffff0004);
+      uart_word(32'h00004035, 32'h00000008);
+      uart_word(32'h00004036, 32'h00000001);
+      uart_word(32'h00004037, 32'h00000001);
+      uart_word(32'h00004038, 32'h00000001);
+      uart_word(32'h00004039, 32'h0461c040);
+      uart_word(32'h0000403a, 32'hffd30003);
+      uart_word(32'h0000403b, 32'hffff0004);
+      uart_word(32'h0000403c, 32'h00000008);
+      uart_word(32'h0000403d, 32'h00000001);
+      uart_word(32'h0000403e, 32'h00000001);
+      uart_word(32'h0000403f, 32'h00000001);
       // program end here --------
 
       // data start here --------

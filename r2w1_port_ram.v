@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017, miya
+  Copyright (c) 2017 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -19,14 +19,14 @@ module r2w1_port_ram
     parameter ADDR_WIDTH=12
     )
   (
-   input                         clk,
-   input [(ADDR_WIDTH-1):0]      addr_r_a,
-   input [(ADDR_WIDTH-1):0]      addr_r_b,
-   input [(ADDR_WIDTH-1):0]      addr_w,
-   input [(DATA_WIDTH-1):0]      data_in,
-   input                         we,
-   output [(DATA_WIDTH-1):0] data_out_a,
-   output [(DATA_WIDTH-1):0] data_out_b
+   input wire                     clk,
+   input wire [(ADDR_WIDTH-1):0]  addr_r_a,
+   input wire [(ADDR_WIDTH-1):0]  addr_r_b,
+   input wire [(ADDR_WIDTH-1):0]  addr_w,
+   input wire [(DATA_WIDTH-1):0]  data_in,
+   input wire                     we,
+   output wire [(DATA_WIDTH-1):0] data_out_a,
+   output wire [(DATA_WIDTH-1):0] data_out_b
    );
 
   rw_port_ram

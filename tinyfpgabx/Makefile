@@ -1,32 +1,20 @@
-PROJECT=top
+SRC=top.v ../mini_audio.v ../mini_vga.v ../mini_sprite.v ../fifo.v ../frac_clk.v ../shift_register_vector.v ../r2w1_port_ram.v ../rw_port_ram.v ../sc1_cpu.v ../sc1_soc.v ../uart.v ../free_run_counter.v ../i2c_master_single.v ../default_code_rom.v ../default_data_rom.v ../default_code_mem.v ../default_data_mem.v ../default_data_mem_pair.v
+PNROP=--lp8k --package cm81
 PCF=tinyfpgabx.pcf
-DEVICE_SHORT=8k
-DEVICE=lp$(DEVICE_SHORT)
-PACKAGE=cm81
-SOURCE_LIB=uart.v mini_audio.v mini_vga.v mini_sprite.v fifo.v frac_clk.v r2w1_port_ram.v rw_port_ram.v shift_register_vector.v sc1_cpu.v sc1_soc.v default_code_mem.v default_data_mem.v default_data_mem_pair.v free_run_counter.v i2c_master_single.v
-SOURCE=top.v
-TMPFILE=$(PROJECT).blif $(PROJECT).asc $(PROJECT).rpt $(PROJECT).bin .sconsign.dblite $(SOURCE_LIB)
-CHIPDB_PATH=$(HOME)/.apio/packages/toolchain-icestorm/share/icebox
 
-all: $(PROJECT).bin
+all: pack.bin
 
-$(SOURCE_LIB):
-	cp ../$@ ./
+prog: pack.bin
+	tinyprog -p $<
 
-$(PROJECT).blif: $(SOURCE) $(SOURCE_LIB)
-	yosys -p 'synth_ice40 -top $(PROJECT) -blif $(PROJECT).blif' $(SOURCE) $(SOURCE_LIB)
+pack.bin: pnr.asc
+	icepack $< $@
 
-$(PROJECT).asc: $(PCF) $(PROJECT).blif
-	arachne-pnr -r -d $(DEVICE_SHORT) -P $(PACKAGE) -o $(PROJECT).asc -p $(PCF) $(PROJECT).blif
+pnr.asc: synth.json
+	nextpnr-ice40 $(PNROP) --json $< --pcf $(PCF) --asc $@
 
-$(PROJECT).bin: $(PROJECT).asc
-	icepack $(PROJECT).asc $(PROJECT).bin
-
-timing: $(PROJECT).asc
-	icetime -C $(CHIPDB_PATH)/chipdb-$(DEVICE_SHORT).txt -d $(DEVICE) -mtr $(PROJECT).rpt $(PROJECT).asc
-
-prog: $(PROJECT).bin
-	tinyprog -p $(PROJECT).bin
+synth.json: $(SRC)
+	yosys -p "read_verilog $^; synth_ice40 -json $@"
 
 clean:
-	rm -f $(TMPFILE)
+	rm -f *.json *.asc *.bin

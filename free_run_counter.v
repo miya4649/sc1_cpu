@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2018, miya
+  Copyright (c) 2018 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -18,8 +18,8 @@ module free_run_counter
     parameter WIDTH = 32
     )
   (
-   input  clk,
-   input  reset,
+   input wire             clk,
+   input wire             reset,
    output reg [WIDTH-1:0] count
    );
 

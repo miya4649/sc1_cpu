@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2018, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -17,49 +17,56 @@ module sc1_soc
   #(
     parameter UART_CLK_HZ = 50000000,
     parameter UART_SCLK_HZ = 115200,
-    parameter UART_COUNTER_WIDTH = 9,
     parameter I2C_CLK_HZ = 50000000,
     parameter I2C_SCLK_HZ = 100000,
     parameter WIDTH_D = 32,
     parameter DEPTH_I = 12,
     parameter DEPTH_D = 12,
-    parameter DEPTH_V = 17
+    parameter DEPTH_V = 17,
+    parameter BPP = 8
     )
   (
-   input            clk,
-   input            reset,
+   input wire  clk,
+   input wire  reset,
 `ifdef USE_UART
-   input            uart_rxd,
-   output           uart_txd,
+   input wire  uart_rxd,
+   output wire uart_txd,
 `endif
 `ifdef USE_AUDIO
-   input            clka,
-   input            reseta,
-   output           audio_r,
-   output           audio_l,
+   input wire  clka,
+   input wire  reseta,
+   output wire audio_r,
+   output wire audio_l,
 `endif
 `ifdef USE_MINI_AUDIO
-   output           audio_r,
-   output           audio_l,
+   output wire audio_r,
+   output wire audio_l,
+`endif
+`ifdef USE_XAUDIO
+   input wire  clka,
+   input wire  reseta,
+   output wire [31:0] audio_data,
+   output wire audio_id,
+   output wire audio_valid,
+   input wire  audio_ready,
 `endif
 `ifdef USE_VGA
-   input            clkv,
-   input            resetv,
-   output           vga_hs,
-   output           vga_vs,
-   output [3:0]     vga_r,
-   output [3:0]     vga_g,
-   output [3:0]     vga_b,
+   input wire  clkv,
+   input wire  resetv,
+   output wire vga_hs,
+   output wire vga_vs,
+   output wire [BPP-1:0] vga_color_out,
+   output wire vga_de,
 `endif
 `ifdef USE_MINI_VGA
-   output           vga_hs,
-   output           vga_vs,
-   output [`MINI_VGA_BPP-1:0] vga_color_out,
+   output wire vga_hs,
+   output wire vga_vs,
+   output wire [`MINI_VGA_BPP-1:0] vga_color_out,
 `endif
 `ifdef USE_I2C
-   inout            i2c_sda,
-   inout            i2c_scl,
-`endif
+   inout wire  i2c_sda,
+   inout wire  i2c_scl,
+               `endif
    output reg [9:0] led
    );
 
@@ -91,32 +98,35 @@ module sc1_soc
   localparam DEPTH_IO_REG = 5;
   localparam DEPTH_SYS_REG = 4;
 
-  wire [WIDTH_I-1:0] mem_i_r;
-  wire [DEPTH_I-1:0] mem_i_addr_r;
-  reg [DEPTH_I-1:0]  mem_i_addr_w;
-  reg [WIDTH_I-1:0]  mem_i_w;
-  reg                mem_i_we;
+  localparam AUDIO_WIDTH = 16;
+  localparam BUFFER_DEPTH = 4;
 
-  wire [WIDTH_D-1:0] mem_d_r_a;
-  wire [WIDTH_D-1:0] mem_d_r_b;
-  reg [WIDTH_D-1:0]  mem_d_w;
-  reg [DEPTH_V-1:0]  mem_d_addr_w;
-  reg [DEPTH_V-1:0]  mem_d_addr_r_a;
-  reg [DEPTH_V-1:0]  mem_d_addr_r_b;
-  reg                mem_d_we;
+  wire [WIDTH_I-1:0]  mem_i_r;
+  wire [DEPTH_I-1:0]  mem_i_addr_r;
+  reg [DEPTH_I-1:0]   mem_i_addr_w;
+  reg [WIDTH_I-1:0]   mem_i_w;
+  reg                 mem_i_we;
 
-  wire               cpu_stopped;
-  reg [WIDTH_D-1:0]  cpu_d_r_a;
-  reg [WIDTH_D-1:0]  cpu_d_r_b;
-  wire [WIDTH_D-1:0] cpu_d_w;
-  wire [DEPTH_V-1:0] cpu_d_addr_w;
-  wire [DEPTH_V-1:0] cpu_d_addr_r_a;
-  wire [DEPTH_V-1:0] cpu_d_addr_r_b;
-  reg [DEPTH_V-1:0]  cpu_d_addr_w_d1;
-  wire               cpu_d_we;
+  wire [WIDTH_D-1:0]  mem_d_r_a;
+  wire [WIDTH_D-1:0]  mem_d_r_b;
+  reg [WIDTH_D-1:0]   mem_d_w;
+  reg [DEPTH_V-1:0]   mem_d_addr_w;
+  reg [DEPTH_V-1:0]   mem_d_addr_r_a;
+  reg [DEPTH_V-1:0]   mem_d_addr_r_b;
+  reg                 mem_d_we;
 
-  reg [DEPTH_V-1:0]  soc_addr_r;
-  reg [DEPTH_V-1:0]  soc_addr_w;
+  wire                cpu_stopped;
+  reg [WIDTH_D-1:0]   cpu_d_r_a;
+  reg [WIDTH_D-1:0]   cpu_d_r_b;
+  wire [WIDTH_D-1:0]  cpu_d_w;
+  wire [DEPTH_V-1:0]  cpu_d_addr_w;
+  wire [DEPTH_V-1:0]  cpu_d_addr_r_a;
+  wire [DEPTH_V-1:0]  cpu_d_addr_r_b;
+  reg [DEPTH_V-1:0]   cpu_d_addr_w_d1;
+  wire                cpu_d_we;
+
+  reg [DEPTH_V-1:0]   soc_addr_r;
+  reg [DEPTH_V-1:0]   soc_addr_w;
   reg [WIDTH_SOC-1:0] soc_data_r;
   reg [WIDTH_SOC-1:0] soc_data_w;
   reg                 soc_we;
@@ -169,7 +179,7 @@ module sc1_soc
   reg [MAPPER_BITS-1:0] map_soc_r_d1;
   reg [MAPPER_BITS-1:0] map_soc_w;
 
-  integer               i;
+  integer i;
 
   // master
   localparam MASTER_BITS = 1;
@@ -202,7 +212,6 @@ module sc1_soc
   localparam CHR_SIZE_BITS = 6;
   localparam CHR_WIDTH = 8;
   localparam CHR_BPP = 2;
-  wire [8-1:0]          ext_chr_color;
   reg [DEPTH_V-1:0]     chr_chr_d_addr_w;
   reg [CHR_WIDTH-1:0]   chr_chr_d_w;
   reg                   chr_chr_d_we;
@@ -230,7 +239,7 @@ module sc1_soc
   wire [WIDTH_D-1:0]       vga_vcount;
   wire [32-1:0]            ext_vga_count_h;
   wire [32-1:0]            ext_vga_count_v;
-  wire [`MINI_VGA_BPP-1:0] vga_color;
+  wire [`MINI_VGA_BPP-1:0] vga_color_in;
 `endif
 `ifdef USE_AUDIO
   // audio
@@ -238,6 +247,10 @@ module sc1_soc
 `endif
 `ifdef USE_MINI_AUDIO
   // mini audio
+  wire                  audio_full;
+`endif
+`ifdef USE_XAUDIO
+  // xaudio
   wire                  audio_full;
 `endif
 `ifdef USE_TIMER
@@ -256,6 +269,15 @@ module sc1_soc
   assign i2c_start = io_reg_w[IO_REG_W_I2C][9];
   assign i2c_r_ack = io_reg_w[IO_REG_W_I2C][8];
   assign i2c_data_w = io_reg_w[IO_REG_W_I2C][7:0];
+`endif
+`ifdef USE_MEM_S
+  localparam WIDTH_S = 16;
+  localparam DEPTH_S = 16;
+  wire [WIDTH_S-1:0] mem_s_r;
+  reg [WIDTH_S-1:0]  mem_s_w;
+  reg [DEPTH_S-1:0]  mem_s_addr_w;
+  reg [DEPTH_S-1:0]  mem_s_addr_r;
+  reg                mem_s_we;
 `endif
 
   // address decode
@@ -548,6 +570,9 @@ module sc1_soc
 `ifdef USE_MINI_AUDIO
       io_reg_r[IO_REG_R_AUDIO_FULL] <= audio_full;
 `endif
+`ifdef USE_XAUDIO
+      io_reg_r[IO_REG_R_AUDIO_FULL] <= audio_full;
+`endif
 `ifdef USE_TIMER
       io_reg_r[IO_REG_R_TIMER_COUNT] <= timer_count;
 `endif
@@ -739,18 +764,8 @@ module sc1_soc
      );
 `endif
 
-
   // 16bit scratch memory
 `ifdef USE_MEM_S
-  localparam WIDTH_S = 16;
-  localparam DEPTH_S = 16;
-
-  wire [WIDTH_S-1:0] mem_s_r;
-  reg [WIDTH_S-1:0]  mem_s_w;
-  reg [DEPTH_S-1:0]  mem_s_addr_w;
-  reg [DEPTH_S-1:0]  mem_s_addr_r;
-  reg                mem_s_we;
-
   // mem_s_addr_r
   always @*
     begin
@@ -926,8 +941,7 @@ module sc1_soc
     #(
       .CLK_HZ (UART_CLK_HZ),
       .SCLK_HZ (UART_SCLK_HZ),
-      .WIDTH (UART_WIDTH),
-      .COUNTER_WIDTH (UART_COUNTER_WIDTH)
+      .WIDTH (UART_WIDTH)
       )
   uart_0
     (
@@ -948,9 +962,9 @@ module sc1_soc
 
   // layer
   localparam PLANES = 2;
-  wire signed [32-1:0] color_all;
-  wire signed [32-1:0] color [0:PLANES-1];
-  reg signed [32-1:0]  layer [0:PLANES-1];
+  wire [BPP-1:0] color_all;
+  wire [BPP-1:0] color [0:PLANES-1];
+  reg  [BPP-1:0] layer [0:PLANES-1];
   always @*
     begin
       layer[0] = (color[0] == 0) ? 0 : color[0];
@@ -1094,22 +1108,41 @@ module sc1_soc
      .ext_count_v (ext_vga_count_v)
      );
 
-  vga_iface vga_iface_0
+  vga_iface
+    #(
+`ifdef VGA_720P
+      .VGA_MAX_H (1650-1),
+      .VGA_MAX_V (750-1),
+      .VGA_WIDTH (1280),
+      .VGA_HEIGHT (720),
+      .VGA_SYNC_H_START (1390),
+      .VGA_SYNC_V_START (725),
+      .VGA_SYNC_H_END (1430),
+      .VGA_SYNC_V_END (730)
+`else
+      .VGA_MAX_H (800-1),
+      .VGA_MAX_V (525-1),
+      .VGA_WIDTH (640),
+      .VGA_HEIGHT (480),
+      .VGA_SYNC_H_START (656),
+      .VGA_SYNC_V_START (490),
+      .VGA_SYNC_H_END (752),
+      .VGA_SYNC_V_END (492)
+`endif
+      )
+  vga_iface_0
     (
      .clk (clk),
      .reset (reset),
-
      .vsync (vga_vsync),
      .vcount (vga_vcount),
      .ext_clkv (clkv),
      .ext_resetv (resetv),
-     .ext_color (color_all),
+     .ext_color_in (color_all),
      .ext_vga_hs (vga_hs),
      .ext_vga_vs (vga_vs),
-     .ext_vga_de (),
-     .ext_vga_r (vga_r),
-     .ext_vga_g (vga_g),
-     .ext_vga_b (vga_b),
+     .ext_vga_de (vga_de),
+     .ext_vga_color_out (vga_color_out),
      .ext_count_h (ext_vga_count_h),
      .ext_count_v (ext_vga_count_v)
      );
@@ -1165,7 +1198,7 @@ module sc1_soc
      .y (io_reg_w[IO_REG_W_SPRITE_Y]),
      .scale (io_reg_w[IO_REG_W_SPRITE_SCALE]),
 
-     .ext_color (vga_color),
+     .ext_color (vga_color_in),
      .ext_count_h (ext_vga_count_h),
      .ext_count_v (ext_vga_count_v)
      );
@@ -1182,7 +1215,8 @@ module sc1_soc
       .VGA_SYNC_V_END (`MINI_VGA_SYNC_V_END),
       .LINE_BITS (`MINI_VGA_LINE_BITS),
       .COUNTER_BITS (`MINI_VGA_COUNTER_BITS),
-      .BPP (`MINI_VGA_BPP)
+      .BPP (`MINI_VGA_BPP),
+      .ENABLE_FRAC_CLK (`MINI_VGA_ENABLE_FRAC_CLK)
       )
   mini_vga_0
     (
@@ -1194,10 +1228,11 @@ module sc1_soc
      .scale_h (`MINI_VGA_SCALE_H),
      .vsync (vga_vsync),
      .vcount (vga_vcount),
-     .ext_color (vga_color),
+     .ext_color (vga_color_in),
      .ext_vga_hs (vga_hs),
      .ext_vga_vs (vga_vs),
      .ext_vga_de (),
+     .ext_vga_clk (),
      .ext_vga_color (vga_color_out),
      .ext_count_h (ext_vga_count_h),
      .ext_count_v (ext_vga_count_v)
@@ -1240,6 +1275,66 @@ module sc1_soc
      .full (audio_full),
      .ext_audio_r (audio_r),
      .ext_audio_l (audio_l)
+     );
+
+`endif
+
+`ifdef USE_XAUDIO
+
+  wire signed [16:0] sample_l0;
+  wire signed [16:0] sample_r0;
+  reg signed [15:0]  sample_l1;
+  reg signed [15:0]  sample_r1;
+  wire [31:0]        sample_data;
+  reg                sample_en;
+  reg                audio_toggle_pr;
+
+  assign sample_l0 = io_reg_w[IO_REG_W_AUDIO_DATA][31:16];
+  assign sample_r0 = io_reg_w[IO_REG_W_AUDIO_DATA][15:0];
+
+  always @(posedge clk)
+    begin
+      sample_l1 <= sample_l0 - 16'h8000;
+      sample_r1 <= sample_r0 - 16'h8000;
+    end
+
+  assign sample_data = {sample_l1, sample_r1};
+
+  always @(posedge clk)
+    begin
+      audio_toggle_pr <= io_reg_w[IO_REG_W_AUDIO_VALID];
+    end
+
+  always @(posedge clk)
+    begin
+      if (audio_toggle_pr != io_reg_w[IO_REG_W_AUDIO_VALID])
+        begin
+          sample_en <= TRUE;
+        end
+      else
+        begin
+          sample_en <= FALSE;
+        end
+    end
+
+  xlive_audio
+    #(
+      .AUDIO_WIDTH (AUDIO_WIDTH),
+      .BUFFER_DEPTH (BUFFER_DEPTH)
+      )
+  xlive_audio_0
+    (
+     .clk_tx (clka),
+     .clk_rx (clk),
+     .reset_tx (reseta),
+     .reset_rx (reset),
+     .data_rx (sample_data),
+     .en_rx (sample_en),
+     .full_rx (audio_full),
+     .data_tx (audio_data),
+     .valid_tx (audio_valid),
+     .id_tx (audio_id),
+     .ready_tx (audio_ready)
      );
 
 `endif

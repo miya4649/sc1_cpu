@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2018, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -82,9 +82,9 @@ public class Asm
         "module %s\n", hdlName);
       writer.printf(
         "  (\n" +
-        "    input clk,\n");
+        "    input wire clk,\n");
       writer.printf(
-        "    input [%d:0] addr,\n", (romDepth - 1));
+        "    input wire [%d:0] addr,\n", (romDepth - 1));
       writer.printf(
         "    output reg [%d:0] data_out\n", (DATA_WIDTH - 1));
       writer.printf(
@@ -146,11 +146,11 @@ public class Asm
       writer.printf(
         "    )\n" +
         "  (\n" +
-        "   input                         clk,\n" +
-        "   input [(ADDR_WIDTH-1):0]      addr_r,\n" +
-        "   input [(ADDR_WIDTH-1):0]      addr_w,\n" +
-        "   input [(DATA_WIDTH-1):0]      data_in,\n" +
-        "   input                         we,\n" +
+        "   input wire                    clk,\n" +
+        "   input wire [(ADDR_WIDTH-1):0] addr_r,\n" +
+        "   input wire [(ADDR_WIDTH-1):0] addr_w,\n" +
+        "   input wire [(DATA_WIDTH-1):0] data_in,\n" +
+        "   input wire                    we,\n" +
         "   output reg [(DATA_WIDTH-1):0] data_out\n" +
         "   );\n" +
         "\n" +

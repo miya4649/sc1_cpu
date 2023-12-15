@@ -15,6 +15,7 @@ set_global_assignment -name VERILOG_FILE ../cdc_fifo.v
 set_global_assignment -name VERILOG_FILE ../cdc_synchronizer.v
 set_global_assignment -name VERILOG_FILE ../chr_bg.v
 set_global_assignment -name VERILOG_FILE ../dual_clk_ram.v
+set_global_assignment -name VERILOG_FILE ../shift_register.v
 set_global_assignment -name VERILOG_FILE ../shift_register_vector.v
 set_global_assignment -name VERILOG_FILE ../sprite.v
 set_global_assignment -name VERILOG_FILE ../vga_iface.v

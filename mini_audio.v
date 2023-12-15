@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2018, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -15,7 +15,7 @@
 
 // pcm[31:16]: unsigned 16bit pcm R
 // pcm[15:0]:  unsigned 16bit pcm L
-// FACTOR MUL/DIV: ex. 48kHz/16MHz = 3/1000
+// FACTOR MUL/DIV: ex. 48kHz * 2/16MHz = 3/500
 // COUNTER_BITS > FACTOR MUL,DIV BITS + 1
 
 module mini_audio
@@ -23,15 +23,15 @@ module mini_audio
     parameter COUNTER_BITS = 20
     )
   (
-   input                           clk,
-   input                           reset,
-   input [31:0]                    data,
-   input                           valid_toggle,
-   input signed [COUNTER_BITS-1:0] ext_factor_mul,
-   input signed [COUNTER_BITS-1:0] ext_factor_div,
-   output                          full,
-   output                          ext_audio_r,
-   output                          ext_audio_l
+   input wire                           clk,
+   input wire                           reset,
+   input wire [31:0]                    data,
+   input wire                           valid_toggle,
+   input wire signed [COUNTER_BITS-1:0] ext_factor_mul,
+   input wire signed [COUNTER_BITS-1:0] ext_factor_div,
+   output wire                          full,
+   output wire                          ext_audio_r,
+   output wire                          ext_audio_l
    );
 
   localparam TRUE = 1'b1;
@@ -117,6 +117,7 @@ module mini_audio
      .reset (reset),
      .factor_mul (ext_factor_mul),
      .factor_div (ext_factor_div),
+     .clk_out (),
      .en (req)
    );
 

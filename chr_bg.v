@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2017, miya
+  Copyright (c) 2016 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -19,36 +19,36 @@ module chr_bg
     parameter BITMAP_BITS = 2
     )
   (
-   input                     clk,
-   input                     reset,
+   input wire         clk,
+   input wire         reset,
 
-   output signed [32-1:0]    chr_length,
-   input signed [32-1:0]     chr_address,
-   input signed [8-1:0]      chr_din,
-   output signed [8-1:0]     chr_dout,
-   input                     chr_we,
-   input                     chr_oe,
+   output wire [31:0] chr_length,
+   input wire [31:0]  chr_address,
+   input wire [7:0]   chr_din,
+   output wire [7:0]  chr_dout,
+   input wire         chr_we,
+   input wire         chr_oe,
 
-   output signed [32-1:0]    bitmap_length,
-   input signed [32-1:0]     bitmap_address,
-   input signed [8-1:0]      bitmap_din,
-   output signed [8-1:0]     bitmap_dout,
-   input                     bitmap_we,
-   input                     bitmap_oe,
+   output wire [31:0] bitmap_length,
+   input wire [31:0]  bitmap_address,
+   input wire [7:0]   bitmap_din,
+   output wire [7:0]  bitmap_dout,
+   input wire         bitmap_we,
+   input wire         bitmap_oe,
 
-   input signed [32-1:0]     x,
-   input signed [32-1:0]     y,
-   input signed [32-1:0]     scale,
-   input signed [32-1:0]     palette0,
-   input signed [32-1:0]     palette1,
-   input signed [32-1:0]     palette2,
-   input signed [32-1:0]     palette3,
+   input wire [31:0]  x,
+   input wire [31:0]  y,
+   input wire [31:0]  scale,
+   input wire [31:0]  palette0,
+   input wire [31:0]  palette1,
+   input wire [31:0]  palette2,
+   input wire [31:0]  palette3,
 
-   input                     ext_clkv,
-   input                     ext_resetv,
-   output reg signed [8-1:0] ext_color,
-   input signed [32-1:0]     ext_count_h,
-   input signed [32-1:0]     ext_count_v
+   input wire         ext_clkv,
+   input wire         ext_resetv,
+   output reg [7:0]   ext_color,
+   input wire [31:0]  ext_count_h,
+   input wire [31:0]  ext_count_v
    );
 
   localparam INT_BITS = 32;
@@ -71,25 +71,25 @@ module chr_bg
   assign bitmap_dout = 1'd0;
 
   // logic
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dx0_d1;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dy0_d1;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dx1_d2;
-  reg signed [OFFSET_BITS+SCALE_BITS-1:0] dy1_d2;
-  reg [ADDR_BITS-1:0]                     chr_raddr_d3;
-  wire [CHR_BITS-1:0]                     chr_name_d4;
-  wire [CHR_BITS-1:0]                     chr_name_d6;
-  wire signed [OFFSET_BITS-1:0]           x_sync;
-  wire signed [OFFSET_BITS-1:0]           y_sync;
-  wire [SCALE_BITS_BITS-1:0]              scale_sync;
-  wire [INT_BITS-1:0]                     palette0_sync;
-  wire [INT_BITS-1:0]                     palette1_sync;
-  wire [INT_BITS-1:0]                     palette2_sync;
-  wire [INT_BITS-1:0]                     palette3_sync;
-  reg [SCALE_BITS_BITS-1:0]               scale_sync_d1;
-  reg [BITMAP_ADDR_BITS-1:0]              bitmap_addr0_d3;
-  reg [BITMAP_ADDR_BITS-1:0]              bitmap_addr0_d4;
-  reg [BITMAP_ADDR_BITS-1:0]              bitmap_addr1_d5;
-  wire [BITMAP_DATA_BITS-1:0]             bitmap_data_d6;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dx0_d1;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dy0_d1;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dx1_d2;
+  reg [OFFSET_BITS+SCALE_BITS-1:0] dy1_d2;
+  reg [ADDR_BITS-1:0]              chr_raddr_d3;
+  wire [CHR_BITS-1:0]              chr_name_d5;
+  wire [CHR_BITS-1:0]              chr_name_d8;
+  wire [OFFSET_BITS-1:0]           x_sync;
+  wire [OFFSET_BITS-1:0]           y_sync;
+  wire [SCALE_BITS_BITS-1:0]       scale_sync;
+  wire [INT_BITS-1:0]              palette0_sync;
+  wire [INT_BITS-1:0]              palette1_sync;
+  wire [INT_BITS-1:0]              palette2_sync;
+  wire [INT_BITS-1:0]              palette3_sync;
+  reg [SCALE_BITS_BITS-1:0]        scale_sync_d1;
+  reg [BITMAP_ADDR_BITS-1:0]       bitmap_addr0_d3;
+  wire [BITMAP_ADDR_BITS-1:0]      bitmap_addr0_d5;
+  reg [BITMAP_ADDR_BITS-1:0]       bitmap_addr1_d6;
+  wire [BITMAP_DATA_BITS-1:0]      bitmap_data_d8;
 
   always @(posedge ext_clkv)
     begin
@@ -100,10 +100,9 @@ module chr_bg
       dy1_d2 <= (dy0_d1 << scale_sync_d1) >> SCALE_DIV_BITS;
       chr_raddr_d3 <= (dy1_d2[CHR_SIZE_BITS+BITMAP_SIZE_BITS-1:BITMAP_SIZE_BITS] << CHR_SIZE_BITS) + dx1_d2[CHR_SIZE_BITS+BITMAP_SIZE_BITS-1:BITMAP_SIZE_BITS];
       bitmap_addr0_d3 <= (dy1_d2[BITMAP_SIZE_BITS-1:0] << BITMAP_SIZE_BITS) + dx1_d2[BITMAP_SIZE_BITS-1:0];
-      bitmap_addr0_d4 <= bitmap_addr0_d3;
-      bitmap_addr1_d5 <= (chr_name_d4 << (BITMAP_SIZE_BITS << 1)) + bitmap_addr0_d4;
-      case ({chr_name_d6[7:6], bitmap_data_d6})
-        // ext_color: 7 cycle delay
+      bitmap_addr1_d6 <= (chr_name_d5 << (BITMAP_SIZE_BITS << 1)) + bitmap_addr0_d5;
+      case ({chr_name_d8[7:6], bitmap_data_d8})
+        // ext_color: 9 cycle delay
         4'b0000: ext_color <= palette0_sync[7:0];
         4'b0001: ext_color <= palette0_sync[15:8];
         4'b0010: ext_color <= palette0_sync[23:16];
@@ -140,7 +139,7 @@ module chr_bg
      .we (chr_we),
      .read_clock (ext_clkv),
      .write_clock (clk),
-     .data_out (chr_name_d4)
+     .data_out (chr_name_d5)
      );
 
   // Character Generator RAM
@@ -152,12 +151,12 @@ module chr_bg
   dual_clk_ram_1
     (
      .data_in (bitmap_din),
-     .read_addr (bitmap_addr1_d5),
+     .read_addr (bitmap_addr1_d6),
      .write_addr (bitmap_address),
      .we (bitmap_we),
      .read_clock (ext_clkv),
      .write_clock (clk),
-     .data_out (bitmap_data_d6)
+     .data_out (bitmap_data_d8)
      );
 
   cdc_synchronizer
@@ -166,11 +165,10 @@ module chr_bg
       )
   cdc_synchronizer_x
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (x[OFFSET_BITS-1:0]),
      .data_out (x_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   cdc_synchronizer
@@ -179,11 +177,10 @@ module chr_bg
       )
   cdc_synchronizer_y
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (y[OFFSET_BITS-1:0]),
      .data_out (y_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   cdc_synchronizer
@@ -192,11 +189,10 @@ module chr_bg
       )
   cdc_synchronizer_scale
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (scale[SCALE_BITS-1:0]),
      .data_out (scale_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   cdc_synchronizer
@@ -205,11 +201,10 @@ module chr_bg
       )
   cdc_synchronizer_palette0
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (palette0),
      .data_out (palette0_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   cdc_synchronizer
@@ -218,11 +213,10 @@ module chr_bg
       )
   cdc_synchronizer_palette1
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (palette1),
      .data_out (palette1_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   cdc_synchronizer
@@ -231,11 +225,10 @@ module chr_bg
       )
   cdc_synchronizer_palette2
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (palette2),
      .data_out (palette2_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   cdc_synchronizer
@@ -244,23 +237,34 @@ module chr_bg
       )
   cdc_synchronizer_palette3
     (
-     .clk_in (clk),
-     .clk_out (ext_clkv),
+     .clk (ext_clkv),
      .data_in (palette3),
      .data_out (palette3_sync),
-     .reset_in (reset)
+     .reset (reset)
      );
 
   shift_register_vector
     #(
       .WIDTH (CHR_BITS),
-      .DEPTH (2)
+      .DEPTH (3)
       )
-  shift_register_vector_chr_name_d6
+  shift_register_vector_chr_name_d8
     (
      .clk (ext_clkv),
-     .data_in (chr_name_d4),
-     .data_out (chr_name_d6)
+     .data_in (chr_name_d5),
+     .data_out (chr_name_d8)
+     );
+
+  shift_register_vector
+    #(
+      .WIDTH (BITMAP_ADDR_BITS),
+      .DEPTH (2)
+      )
+  shift_register_vector_bitmap_addr0_d5
+    (
+     .clk (ext_clkv),
+     .data_in (bitmap_addr0_d3),
+     .data_out (bitmap_addr0_d5)
      );
 
 endmodule

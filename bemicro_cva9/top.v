@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016, miya
+  Copyright (c) 2016 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -77,7 +77,6 @@ module top
 
   localparam UART_CLK_HZ = 50400000;
   localparam UART_SCLK_HZ = 115200;
-  localparam UART_COUNTER_WIDTH = 9;
   localparam WIDTH_D = 32;
   localparam DEPTH_I = 12;
   localparam DEPTH_D = 12;
@@ -124,7 +123,6 @@ module top
     #(
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
-      .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
       .WIDTH_D (WIDTH_D),
       .DEPTH_I (DEPTH_I),
       .DEPTH_D (DEPTH_D)
@@ -146,9 +144,7 @@ module top
      .resetv (resetv),
      .vga_hs (VGA_HS),
      .vga_vs (VGA_VS),
-     .vga_r (VGA_R_in),
-     .vga_g (VGA_G_in),
-     .vga_b (VGA_B_in),
+     .vga_color_out (VGA_COLOR_in),
 `endif
      .clk (clk),
      .reset (reset),
@@ -194,17 +190,15 @@ module top
   reg           resetv;
   reg           resetv1;
   // VGA port
-  wire [7:0] VGA_R_in;
-  wire [7:0] VGA_G_in;
-  wire [7:0] VGA_B_in;
+  wire [7:0] VGA_COLOR_in;
   wire       VGA_HS;
   wire       VGA_VS;
-  assign GPIO2 = VGA_R_in[2];
-  assign GPIO4 = VGA_R_in[3];
-  assign GPIO6 = VGA_G_in[2];
-  assign GPIO8 = VGA_G_in[3];
-  assign GPIO_D = VGA_B_in[2];
-  assign DIFF_TX_N9 = VGA_B_in[3];
+  assign GPIO2 = VGA_COLOR_in[6];
+  assign GPIO4 = VGA_COLOR_in[7];
+  assign GPIO6 = VGA_COLOR_in[3];
+  assign GPIO8 = VGA_COLOR_in[4];
+  assign GPIO_D = VGA_COLOR_in[0];
+  assign DIFF_TX_N9 = VGA_COLOR_in[1];
   assign LVDS_TX_O_P3 = VGA_HS;
   assign LVDS_TX_O_P0 = VGA_VS;
 

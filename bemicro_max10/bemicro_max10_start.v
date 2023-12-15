@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2018, miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -37,7 +37,6 @@ module bemicro_max10_start
 
   localparam UART_CLK_HZ = 40000000;
   localparam UART_SCLK_HZ = 115200;
-  localparam UART_COUNTER_WIDTH = 9;
   localparam I2C_CLK_HZ = 40000000;
   localparam I2C_SCLK_HZ = 100000;
   localparam WIDTH_D = 32;
@@ -63,14 +62,14 @@ module bemicro_max10_start
       resetpll <= resetpll1;
     end
 
-  always @(posedge SYS_CLK)
+  wire          clk;
+  wire          pll_locked;
+
+  always @(posedge clk)
     begin
       reset1 <= ~pll_locked;
       reset <= reset1;
     end
-
-  wire          clk;
-  wire          pll_locked;
 
   simple_pll simple_pll_0
     (
@@ -84,7 +83,6 @@ module bemicro_max10_start
     #(
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
-      .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
       .I2C_CLK_HZ (I2C_CLK_HZ),
       .I2C_SCLK_HZ (I2C_SCLK_HZ),
       .WIDTH_D (WIDTH_D),

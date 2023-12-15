@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2018, miya
+  Copyright (c) 2018 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -24,7 +24,7 @@
 `define USE_MINI_VGA
 
 `define MINI_AUDIO_FACTOR_MUL 3
-`define MINI_AUDIO_FACTOR_DIV 1000
+`define MINI_AUDIO_FACTOR_DIV 500
 // 1344 - SCALE_H
 `define MINI_VGA_MAX_H 1340
 // 806 - 1
@@ -43,6 +43,7 @@
 `define MINI_VGA_BPP 3
 `define MINI_VGA_SPRITE_WIDTH_BITS 7
 `define MINI_VGA_SPRITE_HEIGHT_BITS 6
+`define MINI_VGA_ENABLE_FRAC_CLK 0
 
 module top
   (
@@ -72,7 +73,6 @@ module top
 
   localparam UART_CLK_HZ = 16000000;
   localparam UART_SCLK_HZ = 115200;
-  localparam UART_COUNTER_WIDTH = 9;
   localparam I2C_CLK_HZ = 16000000;
   localparam I2C_SCLK_HZ = 100000;
   localparam WIDTH_D = 32;
@@ -131,7 +131,6 @@ module top
     #(
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
-      .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
       .I2C_CLK_HZ (I2C_CLK_HZ),
       .I2C_SCLK_HZ (I2C_SCLK_HZ),
       .WIDTH_D (WIDTH_D),

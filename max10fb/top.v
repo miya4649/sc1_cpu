@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016-2018, miya
+  Copyright (c) 2016 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,6 @@ module top
 
   localparam UART_CLK_HZ = 40000000;
   localparam UART_SCLK_HZ = 115200;
-  localparam UART_COUNTER_WIDTH = 9;
   localparam WIDTH_D = 32;
   // for small FPGAs
   localparam DEPTH_I = 10;
@@ -61,7 +60,6 @@ module top
     #(
       .UART_CLK_HZ (UART_CLK_HZ),
       .UART_SCLK_HZ (UART_SCLK_HZ),
-      .UART_COUNTER_WIDTH (UART_COUNTER_WIDTH),
       .WIDTH_D (WIDTH_D),
       .DEPTH_I (DEPTH_I),
       .DEPTH_D (DEPTH_D)

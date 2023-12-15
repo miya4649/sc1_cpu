@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016 miya
+  Copyright (c) 2015 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -13,28 +13,42 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+`ifndef RAM_TYPE_DISTRIBUTED
+  `define RAM_TYPE_DISTRIBUTED "distributed"
+`endif
+
 module rw_port_ram
   #(
-    parameter DATA_WIDTH=8,
-    parameter ADDR_WIDTH=12
+    parameter DATA_WIDTH = 8,
+    parameter ADDR_WIDTH = 12,
+    parameter RAM_TYPE = "auto"
     )
   (
-   input                         clk,
-   input [(ADDR_WIDTH-1):0]      addr_r,
-   input [(ADDR_WIDTH-1):0]      addr_w,
-   input [(DATA_WIDTH-1):0]      data_in,
-   input                         we,
+   input wire                    clk,
+   input wire [(ADDR_WIDTH-1):0] addr_r,
+   input wire [(ADDR_WIDTH-1):0] addr_w,
+   input wire [(DATA_WIDTH-1):0] data_in,
+   input wire                    we,
    output reg [(DATA_WIDTH-1):0] data_out
    );
 
-  reg [DATA_WIDTH-1:0]           ram [0:(1 << ADDR_WIDTH)-1];
+  generate
+    if (RAM_TYPE == "distributed")
+      begin: gen
+	(* ramstyle = `RAM_TYPE_DISTRIBUTED *) reg [DATA_WIDTH-1:0] ram [0:(1 << ADDR_WIDTH)-1];
+      end
+    else
+      begin: gen
+	reg [DATA_WIDTH-1:0] ram [0:(1 << ADDR_WIDTH)-1];
+      end
+  endgenerate
 
   always @(posedge clk)
     begin
-      data_out <= ram[addr_r];
+      data_out <= gen.ram[addr_r];
       if (we)
         begin
-          ram[addr_w] <= data_in;
+          gen.ram[addr_w] <= data_in;
         end
     end
 

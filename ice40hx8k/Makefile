@@ -1,33 +1,23 @@
-PROJECT = top
-PCF = hx8kboard.pcf
-DEVICE_SHORT = 8k
-DEVICE = hx$(DEVICE_SHORT)
-SOURCE = top.v ../r2w1_port_ram.v ../rw_port_ram.v ../sc1_cpu.v ../sc1_soc.v ../uart.v ../free_run_counter.v ../i2c_master_single.v ../default_code_rom.v ../default_data_rom.v ../default_code_mem.v ../default_data_mem.v ../default_data_mem_pair.v
-CHIPDB_PATH=$(HOME)/.apio/packages/toolchain-icestorm/share/icebox
+SRC=top.v ../r2w1_port_ram.v ../rw_port_ram.v ../sc1_cpu.v ../sc1_soc.v ../uart.v ../free_run_counter.v ../i2c_master_single.v ../default_code_rom.v ../default_data_rom.v ../default_code_mem.v ../default_data_mem.v ../default_data_mem_pair.v
+PNROP=--hx8k
+PCF=hx8kboard.pcf
 
+all: pack.bin
 
-all: $(PROJECT).bin
+prog: pack.bin
+	iceprog $<
 
-$(PROJECT).blif: $(SOURCE)
-	yosys -p 'synth_ice40 -top top -blif $(PROJECT).blif' $(SOURCE)
+prog-ram: pack.bin
+	iceprog -S $<
 
-$(PROJECT).asc: $(PCF) $(PROJECT).blif
-	arachne-pnr -r -d $(DEVICE_SHORT) -o $(PROJECT).asc -p $(PCF) $(PROJECT).blif
+pack.bin: pnr.asc
+	icepack $< $@
 
-$(PROJECT).bin: $(PROJECT).asc
-	icepack $(PROJECT).asc $(PROJECT).bin
+pnr.asc: synth.json
+	nextpnr-ice40 $(PNROP) --json $< --pcf $(PCF) --asc $@
 
-$(PROJECT).rpt: $(PROJECT).asc
-	icetime -d $(DEVICE) -mtr $(PROJECT).rpt $(PROJECT).asc
-
-timing: $(PROJECT).asc
-	icetime -C $(CHIPDB_PATH)/chipdb-$(DEVICE_SHORT).txt -d $(DEVICE) -mtr $(PROJECT).rpt $(PROJECT).asc
-
-prog: $(PROJECT).bin
-	iceprog $(PROJECT).bin
-
-prog-ram: $(PROJECT).bin
-	iceprog -S $(PROJECT).bin
+synth.json: $(SRC)
+	yosys -p "read_verilog $^; synth_ice40 -json $@"
 
 clean:
-	rm -f $(PROJECT).blif $(PROJECT).asc $(PROJECT).rpt $(PROJECT).bin
+	rm -f *.json *.asc *.bin

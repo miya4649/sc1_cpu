@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2016,2018, miya
+  Copyright (c) 2016 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -20,23 +20,23 @@ module mini_sprite
     parameter BPP = 8
     )
   (
-   input                       clk,
-   input                       reset,
+   input wire                   clk,
+   input wire                   reset,
 
-   output signed [32-1:0]      bitmap_length,
-   input [32-1:0]              bitmap_address,
-   input signed [BPP-1:0]      bitmap_din,
-   output signed [BPP-1:0]     bitmap_dout,
-   input                       bitmap_we,
-   input                       bitmap_oe,
+   output wire signed [32-1:0]  bitmap_length,
+   input wire [32-1:0]          bitmap_address,
+   input wire signed [BPP-1:0]  bitmap_din,
+   output wire signed [BPP-1:0] bitmap_dout,
+   input wire                   bitmap_we,
+   input wire                   bitmap_oe,
 
-   input signed [32-1:0]       x,
-   input signed [32-1:0]       y,
-   input signed [32-1:0]       scale,
+   input wire signed [32-1:0]   x,
+   input wire signed [32-1:0]   y,
+   input wire signed [32-1:0]   scale,
 
-   output reg signed [BPP-1:0] ext_color,
-   input signed [32-1:0]       ext_count_h,
-   input signed [32-1:0]       ext_count_v
+   output reg signed [BPP-1:0]  ext_color,
+   input wire signed [32-1:0]   ext_count_h,
+   input wire signed [32-1:0]   ext_count_v
    );
 
   localparam OFFSET_BITS = 16;

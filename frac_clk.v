@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2018, miya
+  Copyright (c) 2018 miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -15,17 +15,19 @@
 
 // factor_mul < factor_div
 // COUNTER_BITS > factor_mul,div bits + 1
+// en, clk_out frequency: clk * factor_mul / factor_div / 2 Hz
 
 module frac_clk
   #(
     parameter COUNTER_BITS = 4
     )
   (
-   input                           clk,
-   input                           reset,
-   input signed [COUNTER_BITS-1:0] factor_mul,
-   input signed [COUNTER_BITS-1:0] factor_div,
-   output reg                      en
+   input wire                           clk,
+   input wire                           reset,
+   input wire signed [COUNTER_BITS-1:0] factor_mul,
+   input wire signed [COUNTER_BITS-1:0] factor_div,
+   output wire                          clk_out,
+   output reg                           en
    );
 
   localparam TRUE = 1'b1;
@@ -34,9 +36,8 @@ module frac_clk
   localparam ZERO = 1'd0;
   localparam SZERO = 1'sd0;
 
-  // clock counter
+  // mul counter
   reg signed [COUNTER_BITS-1:0] counter_mul;
-  reg signed [COUNTER_BITS-1:0] counter_div;
   always @(posedge clk)
     begin
       if (reset == TRUE)
@@ -49,23 +50,72 @@ module frac_clk
         end
     end
 
+  // div counter, generate clk_out
+  reg signed [COUNTER_BITS-1:0] counter_div;
+  reg clk_out1;
   always @(posedge clk)
     begin
       if (reset == TRUE)
         begin
           counter_div <= ZERO;
-          en <= FALSE;
+          clk_out1 <= FALSE;
         end
       else
         begin
           if (counter_mul - counter_div > SZERO)
             begin
               counter_div <= counter_div + factor_div;
+              clk_out1 <= ~clk_out1;
+            end
+        end
+    end
+
+  reg clk_out2;
+  always @(posedge clk)
+    begin
+      if (reset == TRUE)
+        begin
+          clk_out2 <= FALSE;
+        end
+      else
+        begin
+          clk_out2 <= clk_out1;
+        end
+    end
+  assign clk_out = start ? clk_out2 : FALSE;
+
+  // generate en signal
+  always @(posedge clk)
+    begin
+      if (reset == TRUE)
+        begin
+          en <= FALSE;
+        end
+      else
+        begin
+          if ((clk_out1 == FALSE) && (clk_out2 == TRUE))
+            begin
               en <= TRUE;
             end
           else
             begin
               en <= FALSE;
+            end
+        end
+    end
+
+  reg start;
+  always @(posedge clk)
+    begin
+      if (reset == TRUE)
+        begin
+          start <= FALSE;
+        end
+      else
+        begin
+          if (en == TRUE)
+            begin
+              start <= TRUE;
             end
         end
     end
