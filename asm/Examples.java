@@ -553,14 +553,14 @@ public class Examples extends AsmLib
   @Override
   public void program()
   {
-    //example_counter();
+    example_counter();
     //example_helloworld();
     //example_random();
     //example_memory_dump();
     //example_vram_fill();
     //example_ascii();
     //example_clear();
-    example_line();
+    //example_line();
     //example_timer();
     //example_i2c();
   }
@@ -572,7 +572,7 @@ public class Examples extends AsmLib
     //example_random_data();
     //example_ascii_data();
     //example_clear_data();
-    example_line_data();
+    //example_line_data();
     //example_timer_data();
     //example_i2c_data();
   }
