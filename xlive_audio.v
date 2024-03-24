@@ -232,11 +232,11 @@ module xlive_audio
      .data (cs_data)
      );
 
-  shift_register_multi
+  shift_register_factory
     #(
       .DEPTH (9)
       )
-  shift_register_multi_start_d
+  shift_register_factory_start_d
     (
      .clk (clk_tx),
      .din (start),

@@ -11,7 +11,7 @@ all: vivado vivado-run vitis
 vivado:
 	$(VIVADO) -mode batch -notrace -source vivado.tcl
 
-vivado-run: vivado
+vivado-run:
 	$(VIVADO) -mode batch -notrace -source vivado-run.tcl
 
 vitis-classic:

@@ -24,7 +24,7 @@ PMOD_J2_Pin9 --- UART GND
 
 ### makeを使った方法
 
-Linuxのターミナルで
+Linuxのターミナル(bash)で
 
 $ source Vitisのインストールパス/settings64.sh
 
@@ -32,7 +32,7 @@ $ source Vitisのインストールパス/settings64.sh
 
 $ cd (解凍パス)/sc1_cpu
 
-make
+WIDEVGA=y VGA720P=y AUDIO44K=y make
 
 (プログラム、データのmake)
 
@@ -123,7 +123,7 @@ UARTで接続しているマシンで、
 $ export UART_DEVICE=/dev/ttyUSB0
 （デバイス名は状況により変化する場合があります）
 
-$ cd (解凍パス)/sc1_cpu
+$ cd (解凍パス)/sc1_cpu/tools
 
 $ ./launcher ../synth_code.bin ../synth_data.bin
 

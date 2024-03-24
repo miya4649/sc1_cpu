@@ -28,10 +28,6 @@ module shift_register
    output wire dout
    );
 
-  localparam TRUE = 1'b1;
-  localparam FALSE = 1'b0;
-  localparam ZERO = 1'd0;
-
   reg [DELAY-1:0] sreg;
 
   always @(posedge clk)

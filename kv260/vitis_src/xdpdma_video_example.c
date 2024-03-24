@@ -28,7 +28,7 @@
 *
 ******************************************************************************/
 
-/* 2023/12/14 Modified by miya */
+/* 12/14/23 Modified by miya */
 
 /***************************** Include Files *********************************/
 
@@ -253,12 +253,11 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 0, IF00);
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 4, IF04);
-	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 8, 0);
-	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 12, 0);
-	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 16, 0);
-	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 20, 0);
-	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 24, 0);
-	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 28, 0);
+
+    for (int i = 8; i < 32; i += 4)
+    {
+      XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + i, 0);
+    }
 
 	/* Set the Audio Channel (2ch - 1) */
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_CHANNELS, 1);
@@ -282,8 +281,8 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 	 * Here for simplicity we are using PS clock as the source*/
 	XAVBuf_SetAudioVideoClkSrc(AVBufPtr, XAVBUF_PS_CLK, XAVBUF_PL_CLK);
 	/* Issue a soft reset after selecting the input clock sources */
-	//XAVBuf_SoftReset(AVBufPtr);
-	//XAVBuf_AudioSoftReset(AVBufPtr);
+	XAVBuf_SoftReset(AVBufPtr);
+	XAVBuf_AudioSoftReset(AVBufPtr);
 
 	return XST_SUCCESS;
 }

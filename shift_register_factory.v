@@ -19,13 +19,13 @@
 
  wire foo;
  wire [2:0] bar;
- shift_register_multi #(.DEPTH(3)) shift_register_0 (.clk(clk), .din(foo), .dout(bar));
+ shift_register_factory #(.DEPTH(3)) shift_register_factory_0 (.clk(clk), .din(foo), .dout(bar));
 
  bar[0]: 1 clock cycle delay of foo
  bar[2]: 3 clock cycle delay of foo
  */
 
-module shift_register_multi
+module shift_register_factory
   #(
     parameter DEPTH = 2
     )
@@ -34,10 +34,6 @@ module shift_register_multi
    input wire             din,
    output reg [DEPTH-1:0] sreg
    );
-
-  localparam TRUE = 1'b1;
-  localparam FALSE = 1'b0;
-  localparam ZERO = 1'd0;
 
   always @(posedge clk)
     begin

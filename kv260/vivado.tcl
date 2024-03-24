@@ -1,6 +1,6 @@
 set board_type kv260
 set rtl_top_name rtl_top
-set rtl_files {rtl_top.v topinclude.v ../audio_output.v ../cdc_fifo.v ../cdc_synchronizer.v ../chr_bg.v ../default_code_mem.v ../default_code_rom.v ../default_data_mem.v ../default_data_mem_pair.v ../default_data_rom.v ../dual_clk_ram.v ../fifo.v ../frac_clk.v ../free_run_counter.v ../i2c_master_single.v ../one_shot.v ../r2w1_port_ram.v ../rw_port_ram.v ../sc1_cpu.v ../sc1_soc.v ../shift_register.v ../shift_register_vector.v ../shift_register_multi.v ../sprite.v ../uart.v ../vga_iface.v ../xlive_audio.v}
+set rtl_files {rtl_top.v topinclude.v ../audio_output.v ../cdc_fifo.v ../cdc_synchronizer.v ../chr_bg.v ../default_code_mem.v ../default_code_rom.v ../default_data_mem.v ../default_data_mem_pair.v ../default_data_rom.v ../dual_clk_ram.v ../fifo.v ../frac_clk.v ../free_run_counter.v ../i2c_master_single.v ../one_shot.v ../r2w1_port_ram.v ../rw_port_ram.v ../sc1_cpu.v ../sc1_soc.v ../shift_register.v ../shift_register_vector.v ../shift_register_factory.v ../sprite.v ../uart.v ../vga_iface.v ../xlive_audio.v}
 set pin_xdc_file {pins.xdc}
 set timing_xdc_file {timings.xdc}
 set project_name project_1
@@ -67,7 +67,6 @@ CONFIG.RESET_TYPE {ACTIVE_LOW} \
 create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_1
 
 set_property -dict [list \
-###CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {24.576} \
 CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {22.5792} \
 CONFIG.PRIM_SOURCE {Global_buffer} \
 CONFIG.RESET_TYPE {ACTIVE_LOW} \

@@ -1,4 +1,3 @@
-`default_nettype none
 `define USE_UART
 `define USE_XAUDIO
 `define USE_VGA

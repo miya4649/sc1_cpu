@@ -44,20 +44,19 @@ public class Synth extends AsmLib
   private static final int FIXED_SCALE_M1 = (FIXED_SCALE - 1);
   private static final int MOD_LEVEL_MAX = ((int)(FIXED_SCALE * 0.52));
   private static final int SCALE_TABLE_SIZE = 16;
-  private static final int SAMPLE_RATE = 48000;
-  ///private static final int SAMPLE_RATE = 44100;
+  private int SAMPLE_RATE = 48000;
   private static final int SEQ_CH = 4;
   private static final int SEQ_LENGTH = 16;
   private static final int SEQ_INIT_NUM = 20;
   private static final int MAX_CHORD_LENGTH = 16;
   private static final int MAX_CHORD = 16;
   private static final int CHORD_LENGTH = 3;
-  private static final int VIS_MAX_X = 40;
-  private static final int VIS_MAX_Y = 30;
-  /// for kv260
-  ///private static final int VIS_MAX_Y = 22;
+  private int VIS_MAX_X = 40;
+  private int VIS_MAX_Y = 30;
   private static final int VIS_NEXT_LINE = 64;
   private static final int DEFAULT_VOLUME = (int)(FIXED_SCALE / ((SEQ_CH / 2.0) + 2.0));
+  private int SPRITE_SCALE = 4;
+  private static final int SPRITE_LENGTH = 4096;
 
   private StructHelper envParam = new StructHelper();
   private StructHelper oscParam = new StructHelper();
@@ -903,14 +902,13 @@ public class Synth extends AsmLib
   private void f_visualizer_init()
   {
     label("f_visualizer_init");
+    lib_push(SP_REG_LINK);
     // init vga
     lib_set_im32(SPRITE_X_ADDRESS);
     lib_wait_reg2addr();
     as_add(SP_REG_MVI,reg_im(0),reg_im(0), AM_SET,AM_REG,AM_REG);
     as_add(1,reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
-    as_add(2,reg_im(4),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
-    /// for kv260
-    ///as_add(2,reg_im(3),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+    as_add(2,reg_im(SPRITE_SCALE),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
 
     // init parameter
     lib_set_im32(addr_struct("d_vis_param"));
@@ -921,6 +919,18 @@ public class Synth extends AsmLib
     as_add(visParam.offset("a"),reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     as_add(visParam.offset("addr"),reg_im(0),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
     as_add(visParam.offset("vsyncState"),reg_im(FALSE),reg_im(0), AM_OFFSET,AM_REG,AM_REG);
+
+    // clear screen
+    lib_set_im32(SPRITE_ADDRESS);
+    lib_wait_reg2addr();
+    as_add(R6,SP_REG_MVI,reg_im(0), AM_REG,AM_REG,AM_REG);
+    lib_set_im32(SPRITE_LENGTH);
+    lib_wait_reg2addr();
+    as_add(R7,SP_REG_MVI,reg_im(0), AM_REG,AM_REG,AM_REG);
+    lib_set(R8, 0);
+    lib_call("f_memory_fill");
+
+    lib_pop(SP_REG_LINK);
     lib_return();
   }
 
@@ -1251,6 +1261,26 @@ public class Synth extends AsmLib
     visParam.add("a", 0);
     visParam.add("addr", 0);
     visParam.add("vsyncState", FALSE);
+
+    try
+    {
+      if ("y".compareToIgnoreCase(System.getenv("WIDEVGA")) == 0)
+      {
+        VIS_MAX_X = 40;
+        VIS_MAX_Y = 23;
+      }
+      if ("y".compareToIgnoreCase(System.getenv("VGA720P")) == 0)
+      {
+        SPRITE_SCALE = 3;
+      }
+      if ("y".compareToIgnoreCase(System.getenv("AUDIO44K")) == 0)
+      {
+        SAMPLE_RATE = 44100;
+      }
+    }
+    catch (Exception e)
+    {
+    }
   }
 
   @Override
