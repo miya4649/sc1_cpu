@@ -22,87 +22,19 @@ PMOD_J2_Pin9 --- UART GND
 
 デフォルトではKV260用のプロジェクトが生成されます。KR260の場合は、vivado.tclの「set board_type kv260」を「set board_type kr260」に書き換えます。
 
-### makeを使った方法
-
 Linuxのターミナル(bash)で
 
 $ source Vitisのインストールパス/settings64.sh
 
 (例: $ source /opt/Xilinx/Vitis/2023.2/settings64.sh )
 
-$ cd (解凍パス)/sc1_cpu
-
-WIDEVGA=y VGA720P=y AUDIO44K=y make
-
-(プログラム、データのmake)
-
-$ cd kv260
-
-$ make vivado
-
-(Vivadoプロジェクトの作成)
-
-$ make vivado-run
-
-(Synthesis, Implement, Export HW)
-
-$ make vitis
-
-(Vitis Unified IDEのプロジェクト作成、ビルド)
-
-もしくは
+$ cd (解凍パス)/sc1_cpu/kv260
 
 $ make
 
-(上記の3つを一気に行います)
+(sc1_cpuのアセンブラの実行、Vivadoでのビットストリーム生成、Vitisプロジェクトのビルドが連続して行われます。)
 
 Vitis Unified IDEを起動し、
-
-File: Open Workspaceで
-
-(このディレクトリ)/vitis_workspace を選択してOK
-
-View: Flow を選択して表示、
-
-FLOW: Component で Project_1_appを選択、
-
-FLOW: Run で実行します。
-
-### VivadoのTcl Consoleを使った方法
-
-Vivadoを起動してメニュー: Window: Tcl Consoleで
-
-$ pwd
-
-(カレントディレクトリを確認)
-
-$ cd このディレクトリのパス
-
-$ source vivado.tcl
-
-(Vivadoプロジェクト生成スクリプトを実行)
-
-$ source vivado-run.tcl
-
-(Synthesis, Implement, Export HW実行)
-
-これでVivadoのプロジェクトがproject_1ディレクトリ以下に生成され、ビットストリーム生成、ビットストリーム付きのXSAファイルのエクスポートが行われます。
-
-### Vitis Unified IDE の場合
-
-Vitis Unified IDEのTerminalで、
-
-$ pwd
-
-(カレントディレクトリを確認)
-
-$ cd このディレクトリのパス
-
-(このディレクトリに移動)
-
-$ vitis -s vitisnew.py
-
-(Vitisプロジェクト生成スクリプトを実行。ビルドも自動実行される)
 
 File: Open Workspaceで
 

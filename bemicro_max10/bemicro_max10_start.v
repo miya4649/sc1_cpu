@@ -13,7 +13,6 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-`default_nettype none
 `define USE_UART
 `define USE_TIMER
 `define USE_I2C
@@ -100,15 +99,6 @@ module bemicro_max10_start
      .reseta (reseta),
      .audio_r (audio_r),
      .audio_l (audio_l),
-`endif
-`ifdef USE_VGA
-     .clkv (clkv),
-     .resetv (resetv),
-     .vga_hs (VGA_HS),
-     .vga_vs (VGA_VS),
-     .vga_r (VGA_R_in),
-     .vga_g (VGA_G_in),
-     .vga_b (VGA_B_in),
 `endif
 `ifdef USE_I2C
      .i2c_scl (I2C_SCL),

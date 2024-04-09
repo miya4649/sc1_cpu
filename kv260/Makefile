@@ -5,8 +5,18 @@ VIVADO = $(XILINX_VIVADO)/bin/vivado
 VITIS = $(XILINX_VITIS)/bin/vitis
 XSCT = $(XILINX_VITIS)/bin/xsct
 RM = rm -rf
+ROMS=$(wildcard ../*_code.bin ../*_data.bin ../*_code_rom.v ../*_data_rom.v ../*_code_mem.v ../*_data_mem.v ../*_code_tb.txt ../*_data_tb.txt)
 
-all: vivado vivado-run vitis
+all: asm tool vivado vivado-run vitis
+
+run: tool
+	make -C tools run
+
+asm:
+	make -C ../asm WIDEVGA=y VGA720P=y AUDIO44K=y
+
+tool:
+	make -C ../tools
 
 vivado:
 	$(VIVADO) -mode batch -notrace -source vivado.tcl
@@ -21,4 +31,6 @@ vitis:
 	$(VITIS) -source vitisnew.py
 
 clean:
-	$(RM) $(PROJECT) $(VITIS_WORKSPACE) $(VITIS_CLASSIC_WORKSPACE) vivado.log vivado*.jou .Xil *dynamic* *.log *.xpe .gitignore .lock .peers.ini
+	make -C ../tools clean
+	make -C ../asm clean
+	$(RM) $(PROJECT) $(VITIS_WORKSPACE) $(VITIS_CLASSIC_WORKSPACE) $(ROMS) vivado.log vivado*.jou .Xil *dynamic* *.log *.xpe .gitignore .lock .peers.ini

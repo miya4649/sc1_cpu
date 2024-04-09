@@ -151,6 +151,12 @@ void DpPsu_Run(Run_Config *RunCfgPtr)
 	u32 Status;
 	XDpPsu  *DpPsuPtr = RunCfgPtr->DpPsuPtr;
 
+	Status = InitDpDmaSubsystem(RunCfgPtr);
+	if (Status != XST_SUCCESS) {
+		xil_printf("! InitDpDmaSubsystem failed.\n\r");
+		return;
+	}
+
 	XDpPsu_EnableMainLink(DpPsuPtr, 0);
 
 	if (!XDpPsu_IsConnected(DpPsuPtr)) {

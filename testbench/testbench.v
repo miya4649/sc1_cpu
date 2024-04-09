@@ -38,6 +38,7 @@ module testbench;
   localparam ONE = 1'd1;
   localparam ZERO = 1'd0;
   localparam FFFF = {WIDTH_D{1'b1}};
+  localparam VGA_BPP = 8;
 
   reg clk;
   reg reset;
@@ -62,14 +63,12 @@ module testbench;
   reg        resetv;
   wire       vga_hs;
   wire       vga_vs;
-  wire [3:0] vga_r;
-  wire [3:0] vga_g;
-  wire [3:0] vga_b;
+  wire [VGA_BPP-1:0] vga_color_out;
 `endif
 `ifdef USE_MINI_VGA
   wire       vga_hs;
   wire       vga_vs;
-  wire [`MINI_VGA_BPP-1:0] vga_color_out;
+  wire [VGA_BPP-1:0] vga_color_out;
 `endif
 `ifdef USE_I2C
   wire       i2c_sda;
@@ -154,9 +153,7 @@ module testbench;
      .resetv (resetv),
      .vga_hs (vga_hs),
      .vga_vs (vga_vs),
-     .vga_r (vga_r),
-     .vga_g (vga_g),
-     .vga_b (vga_b),
+     .vga_color_out (vga_color_out),
 `endif
 `ifdef USE_MINI_VGA
      .vga_hs (vga_hs),

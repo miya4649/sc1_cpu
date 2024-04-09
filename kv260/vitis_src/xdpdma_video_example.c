@@ -23,7 +23,7 @@
 * Ver   Who Date     Changes
 * ----- --- -------- -----------------------------------------------
 * 1.0	aad 10/19/17	Initial Release
-* 1.1	aad 02/22/18	Fixed the header
+* 1.1   aad 02/22/18    Fixed the header
 *</pre>
 *
 ******************************************************************************/
@@ -53,7 +53,7 @@
 #define DPPSU_BASEADDR		XPAR_XDPPSU_0_BASEADDR
 #define AVBUF_BASEADDR		XPAR_XDPPSU_0_BASEADDR
 #define DPDMA_BASEADDR		XPAR_XDPDMA_0_BASEADDR
-#define INTC_BASEADDR		XPAR_XSCUGIC_0_BASEADDR
+#define INTC_BASEADDR       XPAR_XSCUGIC_0_BASEADDR
 #endif
 
 #define BUFFERSIZE			1280 * 720 * 4		/* HTotal * VTotal * BPP */
@@ -66,6 +66,7 @@ XDpPsu DpPsu;
 XAVBuf AVBuf;
 XScuGic Intr;
 Run_Config RunCfg;
+
 
 /**************************** Type Definitions *******************************/
 
@@ -97,7 +98,7 @@ int main()
 
 	xil_printf("Successfully ran DPDMA Video Example Test\r\n");
 
-	return XST_SUCCESS;
+    return XST_SUCCESS;
 }
 
 /*****************************************************************************/
@@ -119,6 +120,7 @@ int DpdmaVideoExample(Run_Config *RunCfgPtr)
 	u32 Status;
 	/* Initialize the application configuration */
 	InitRunConfig(RunCfgPtr);
+
 	Status = InitDpDmaSubsystem(RunCfgPtr);
 	if (Status != XST_SUCCESS) {
 				return XST_FAILURE;
@@ -126,11 +128,8 @@ int DpdmaVideoExample(Run_Config *RunCfgPtr)
 
 	SetupInterrupts(RunCfgPtr);
 
-	for (int i = 0; i < 2; i++)
-	{
-		sleep(1);
-		InitDpDmaSubsystem(RunCfgPtr);
-	}
+	// Initialize again
+	InitDpDmaSubsystem(RunCfgPtr);
 
 	return XST_SUCCESS;
 }
@@ -150,18 +149,18 @@ int DpdmaVideoExample(Run_Config *RunCfgPtr)
 void InitRunConfig(Run_Config *RunCfgPtr)
 {
 	/* Initial configuration parameters. */
-	RunCfgPtr->DpPsuPtr   		= &DpPsu;
-	RunCfgPtr->IntrPtr   		= &Intr;
-	RunCfgPtr->AVBufPtr  		= &AVBuf;
-	RunCfgPtr->VideoMode 		= XVIDC_VM_1280x720_60_P;
-	RunCfgPtr->Bpc		 		= XVIDC_BPC_8;
-	RunCfgPtr->ColorEncode		= XDPPSU_CENC_RGB;
-	RunCfgPtr->UseMaxCfgCaps	= 0;
-	RunCfgPtr->LaneCount		= LANE_COUNT_1;
-	RunCfgPtr->LinkRate			= LINK_RATE_270GBPS;
-	RunCfgPtr->EnSynchClkMode	= 0;
-	RunCfgPtr->UseMaxLaneCount	= 0;
-	RunCfgPtr->UseMaxLinkRate	= 0;
+		RunCfgPtr->DpPsuPtr   = &DpPsu;
+		RunCfgPtr->IntrPtr   = &Intr;
+		RunCfgPtr->AVBufPtr  = &AVBuf;
+		RunCfgPtr->VideoMode = XVIDC_VM_1280x720_60_P;
+		RunCfgPtr->Bpc		 = XVIDC_BPC_8;
+		RunCfgPtr->ColorEncode			= XDPPSU_CENC_RGB;
+		RunCfgPtr->UseMaxCfgCaps		= 1;
+		RunCfgPtr->LaneCount			= LANE_COUNT_2;
+		RunCfgPtr->LinkRate				= LINK_RATE_270GBPS;
+		RunCfgPtr->EnSynchClkMode		= 0;
+		RunCfgPtr->UseMaxLaneCount		= 1;
+		RunCfgPtr->UseMaxLinkRate		= 0;
 }
 
 /*****************************************************************************/
@@ -210,11 +209,10 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 	}
 	/* Set the output Video Format */
 	XAVBuf_SetOutputVideoFormat(AVBufPtr, RGB_8BPC);
+
 	/* Select the Video/Audio input source */
-	XAVBuf_InputVideoSelect(AVBufPtr, XAVBUF_VIDSTREAM1_LIVE,
-				XAVBUF_VIDSTREAM2_NONE);
-	XAVBuf_InputAudioSelect(AVBufPtr, XAVBUF_AUDSTREAM1_LIVE,
-				XAVBUF_AUDSTREAM2_NO_AUDIO);
+	XAVBuf_InputVideoSelect(AVBufPtr, XAVBUF_VIDSTREAM1_LIVE, XAVBUF_VIDSTREAM2_NONE);
+	XAVBuf_InputAudioSelect(AVBufPtr, XAVBUF_AUDSTREAM1_LIVE, XAVBUF_AUDSTREAM2_NO_AUDIO);
 
 	/* Set the Pixel Clock */
 	XDpPsu_MainStreamAttributes *MsaConfig = &DpPsuPtr->MsaConfig;
@@ -254,10 +252,10 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 0, IF00);
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + 4, IF04);
 
-    for (int i = 8; i < 32; i += 4)
-    {
-      XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + i, 0);
-    }
+	for (int i = 8; i < 32; i += 4)
+	{
+		XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_INFO_DATA + i, 0);
+	}
 
 	/* Set the Audio Channel (2ch - 1) */
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_TX_AUDIO_CHANNELS, 1);
@@ -267,7 +265,6 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 
 	/* Set the Audio Volume L, R, 0-255 */
 	XAVBuf_AudioMixerVolumeControl(AVBufPtr, 255, 255);
-
 
 	/* Configure Video pipeline for graphics channel */
 	XAVBuf_ConfigureGraphicsPipeline(AVBufPtr);
@@ -325,6 +322,7 @@ void SetupInterrupts(Run_Config *RunCfgPtr)
 	/* Trigger DP interrupts on rising edge. */
 	XScuGic_SetPriorityTriggerType(IntrPtr, DPPSU_INTR_ID, 0x0, 0x03);
 
+
 	/* Initialize exceptions. */
 	Xil_ExceptionInit();
 	Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_IRQ_INT,
@@ -339,8 +337,8 @@ void SetupInterrupts(Run_Config *RunCfgPtr)
 	XScuGic_Enable(IntrPtr, DPPSU_INTR_ID);
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_INTR_EN, IntrMask);
 #else
-	XSetupInterruptSystem(RunCfgPtr->DpPsuPtr, &XDpPsu_HpdInterruptHandler, RunCfgPtr->DpPsuPtr->Config.IntrId,
-		RunCfgPtr->DpPsuPtr->Config.IntrParent, XINTERRUPT_DEFAULT_PRIORITY);
+    XSetupInterruptSystem(RunCfgPtr->DpPsuPtr, &XDpPsu_HpdInterruptHandler, RunCfgPtr->DpPsuPtr->Config.IntrId,
+            RunCfgPtr->DpPsuPtr->Config.IntrParent, XINTERRUPT_DEFAULT_PRIORITY);
 	XDpPsu_WriteReg(DpPsuPtr->Config.BaseAddr, XDPPSU_INTR_EN, IntrMask);
 #endif
 }

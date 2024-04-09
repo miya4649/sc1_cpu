@@ -1268,14 +1268,17 @@ public class Synth extends AsmLib
       {
         VIS_MAX_X = 40;
         VIS_MAX_Y = 23;
+        System.out.println("WIDEVGA: y");
       }
       if ("y".compareToIgnoreCase(System.getenv("VGA720P")) == 0)
       {
         SPRITE_SCALE = 3;
+        System.out.println("VGA720P: y");
       }
       if ("y".compareToIgnoreCase(System.getenv("AUDIO44K")) == 0)
       {
         SAMPLE_RATE = 44100;
+        System.out.println("AUDIO44K: y");
       }
     }
     catch (Exception e)
