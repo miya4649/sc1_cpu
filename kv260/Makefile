@@ -10,7 +10,7 @@ ROMS=$(wildcard ../*_code.bin ../*_data.bin ../*_code_rom.v ../*_data_rom.v ../*
 all: asm tool vivado vivado-run vitis
 
 run: tool
-	make -C tools run
+	make -C ../tools run
 
 asm:
 	make -C ../asm WIDEVGA=y VGA720P=y AUDIO44K=y

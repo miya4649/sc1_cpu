@@ -156,18 +156,18 @@ module sc1_soc
   localparam IO_REG_R_AUDIO_FULL = 3;
   localparam IO_REG_R_TIMER_COUNT = 4;
   localparam IO_REG_R_I2C = 5;
-  reg [WIDTH_D-1:0]   io_reg_w[0:((1 << DEPTH_IO_REG) - 1)];
-  reg [WIDTH_D-1:0]   io_reg_r[0:((1 << DEPTH_IO_REG) - 1)];
-  reg                 io_reg_we;
+  reg [WIDTH_D-1:0]      io_reg_w[0:((1 << DEPTH_IO_REG) - 1)];
+  reg [WIDTH_D-1:0]      io_reg_r[0:((1 << DEPTH_IO_REG) - 1)];
+  reg                    io_reg_we;
   reg [DEPTH_IO_REG-1:0] io_reg_addr_r;
-  reg [WIDTH_D-1:0]   io_reg_r_copy;
+  reg [WIDTH_D-1:0]      io_reg_r_copy;
 
   // System register
   localparam SYS_REG_CPU_RESET = 0;
   localparam SYS_REG_CPU_RESUME = 1;
   localparam SYS_REG_MASTER_OF_MEM_D = 2;
-  reg [WIDTH_D-1:0]   sys_reg_w[0:((1 << DEPTH_SYS_REG) - 1)];
-  reg                 sys_reg_we;
+  reg [WIDTH_D-1:0] sys_reg_w[0:((1 << DEPTH_SYS_REG) - 1)];
+  reg               sys_reg_we;
 
   // memory mapper
   reg [MAPPER_BITS-1:0] map_cpu_d_r_a;
@@ -193,14 +193,14 @@ module sc1_soc
 
 `ifdef USE_UART
   // uart
-  localparam UART_WIDTH = 8;
+  localparam            UART_WIDTH = 8;
   reg                   uart_start;
   reg [UART_WIDTH-1:0]  uart_data_tx;
   wire                  uart_busy;
   wire                  uart_re;
 
-  localparam SOC_UART_IF_START_BYTE = 8'b10101010;
-  localparam SOC_UART_IF_END_BYTE = 8'b01010101;
+  localparam            SOC_UART_IF_START_BYTE = 8'b10101010;
+  localparam            SOC_UART_IF_END_BYTE = 8'b01010101;
   wire [UART_WIDTH-1:0] uart_data_rx;
   reg [7:0]             soc_reg [0:9];
   reg [3:0]             soc_reg_state;
@@ -209,25 +209,26 @@ module sc1_soc
 `endif
 `ifdef USE_VGA
   // chr_bg
-  localparam CHR_SIZE_BITS = 6;
-  localparam CHR_WIDTH = 8;
-  localparam CHR_BPP = 2;
-  reg [DEPTH_V-1:0]     chr_chr_d_addr_w;
-  reg [CHR_WIDTH-1:0]   chr_chr_d_w;
-  reg                   chr_chr_d_we;
-  reg [DEPTH_V-1:0]     chr_bit_d_addr_w;
-  reg [CHR_BPP-1:0]     chr_bit_d_w;
-  reg                   chr_bit_d_we;
+  localparam           CHR_SIZE_BITS = 6;
+  localparam           CHR_WIDTH = 8;
+  localparam           CHR_BPP = 2;
+  reg [DEPTH_V-1:0]    chr_chr_d_addr_w;
+  reg [CHR_WIDTH-1:0]  chr_chr_d_w;
+  reg                  chr_chr_d_we;
+  reg [DEPTH_V-1:0]    chr_bit_d_addr_w;
+  reg [CHR_BPP-1:0]    chr_bit_d_w;
+  reg                  chr_bit_d_we;
   // sprite
-  localparam SPRITE_BPP = 8;
-  reg [DEPTH_V-1:0]     sprite_d_addr_w;
-  reg [SPRITE_BPP-1:0]  sprite_d_w;
-  reg                   sprite_d_we;
+  localparam           SPRITE_BPP = 8;
+  reg [DEPTH_V-1:0]    sprite_d_addr_w;
+  reg [SPRITE_BPP-1:0] sprite_d_w;
+  reg                  sprite_d_we;
   // vga
-  wire                  vga_vsync;
-  wire [WIDTH_D-1:0]    vga_vcount;
-  wire [32-1:0]         ext_vga_count_h;
-  wire [32-1:0]         ext_vga_count_v;
+  localparam           PIXEL_DELAY = 9;
+  wire                 vga_vsync;
+  wire [WIDTH_D-1:0]   vga_vcount;
+  wire [32-1:0]        ext_vga_count_h;
+  wire [32-1:0]        ext_vga_count_v;
 `endif
 `ifdef USE_MINI_VGA
   // sprite
@@ -243,36 +244,36 @@ module sc1_soc
 `endif
 `ifdef USE_AUDIO
   // audio
-  wire                  audio_full;
+  wire audio_full;
 `endif
 `ifdef USE_MINI_AUDIO
   // mini audio
-  wire                  audio_full;
+  wire audio_full;
 `endif
 `ifdef USE_XAUDIO
   // xaudio
-  wire                  audio_full;
+  wire audio_full;
 `endif
 `ifdef USE_TIMER
   // timer
-  wire [WIDTH_D-1:0]    timer_count;
+  wire [WIDTH_D-1:0] timer_count;
 `endif
 `ifdef USE_I2C
-  wire [1:0]  i2c_command;
-  wire        i2c_start;
-  wire [7:0]  i2c_data_w;
-  wire        i2c_r_ack;
-  wire        i2c_w_ack;
-  wire [7:0]  i2c_data_r;
-  wire        i2c_busy;
+  wire [1:0] i2c_command;
+  wire       i2c_start;
+  wire [7:0] i2c_data_w;
+  wire       i2c_r_ack;
+  wire       i2c_w_ack;
+  wire [7:0] i2c_data_r;
+  wire       i2c_busy;
   assign i2c_command = io_reg_w[IO_REG_W_I2C][11:10];
   assign i2c_start = io_reg_w[IO_REG_W_I2C][9];
   assign i2c_r_ack = io_reg_w[IO_REG_W_I2C][8];
   assign i2c_data_w = io_reg_w[IO_REG_W_I2C][7:0];
 `endif
 `ifdef USE_MEM_S
-  localparam WIDTH_S = 16;
-  localparam DEPTH_S = 16;
+  localparam         WIDTH_S = 16;
+  localparam         DEPTH_S = 16;
   wire [WIDTH_S-1:0] mem_s_r;
   reg [WIDTH_S-1:0]  mem_s_w;
   reg [DEPTH_S-1:0]  mem_s_addr_w;
@@ -1110,6 +1111,8 @@ module sc1_soc
 
   vga_iface
     #(
+      .PIXEL_DELAY (PIXEL_DELAY),
+      .BPP (BPP),
 `ifdef VGA_720P
       .VGA_MAX_H (1650-1),
       .VGA_MAX_V (750-1),

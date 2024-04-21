@@ -1168,6 +1168,29 @@ public class Synth extends AsmLib
   @Override
   public void init()
   {
+    try
+    {
+      if ("y".compareToIgnoreCase(System.getenv("WIDEVGA")) == 0)
+      {
+        VIS_MAX_X = 40;
+        VIS_MAX_Y = 23;
+        System.out.println("WIDEVGA: y");
+      }
+      if ("y".compareToIgnoreCase(System.getenv("VGA720P")) == 0)
+      {
+        SPRITE_SCALE = 3;
+        System.out.println("VGA720P: y");
+      }
+      if ("y".compareToIgnoreCase(System.getenv("AUDIO44K")) == 0)
+      {
+        SAMPLE_RATE = 44100;
+        System.out.println("AUDIO44K: y");
+      }
+    }
+    catch (Exception e)
+    {
+    }
+
     set_rom_depth(CODE_ROM_DEPTH, DATA_ROM_DEPTH);
     set_stack_address((1 << DATA_ROM_DEPTH) - 1);
     set_filename("synth");
@@ -1236,7 +1259,7 @@ public class Synth extends AsmLib
     seqParam.add("length", SEQ_LENGTH);
     seqParam.add("sizeOfNoteParam", 0);
     seqParam.add("callbackCounter", 0);
-    seqParam.add("callbackRate", (int)(8000 / 48000.0 * SAMPLE_RATE));
+    seqParam.add("callbackRate", (int)(8000.0 / 48000.0 * SAMPLE_RATE));
     seqParam.add("beat", 0);
     seqParam.add("seqDataStart", 0);
     seqParam.add("seqDataEnd", 0);
@@ -1261,29 +1284,6 @@ public class Synth extends AsmLib
     visParam.add("a", 0);
     visParam.add("addr", 0);
     visParam.add("vsyncState", FALSE);
-
-    try
-    {
-      if ("y".compareToIgnoreCase(System.getenv("WIDEVGA")) == 0)
-      {
-        VIS_MAX_X = 40;
-        VIS_MAX_Y = 23;
-        System.out.println("WIDEVGA: y");
-      }
-      if ("y".compareToIgnoreCase(System.getenv("VGA720P")) == 0)
-      {
-        SPRITE_SCALE = 3;
-        System.out.println("VGA720P: y");
-      }
-      if ("y".compareToIgnoreCase(System.getenv("AUDIO44K")) == 0)
-      {
-        SAMPLE_RATE = 44100;
-        System.out.println("AUDIO44K: y");
-      }
-    }
-    catch (Exception e)
-    {
-    }
   }
 
   @Override

@@ -167,8 +167,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (x[OFFSET_BITS-1:0]),
-     .data_out (x_sync),
-     .reset (reset)
+     .data_out (x_sync)
      );
 
   cdc_synchronizer
@@ -179,8 +178,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (y[OFFSET_BITS-1:0]),
-     .data_out (y_sync),
-     .reset (reset)
+     .data_out (y_sync)
      );
 
   cdc_synchronizer
@@ -191,8 +189,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (scale[SCALE_BITS-1:0]),
-     .data_out (scale_sync),
-     .reset (reset)
+     .data_out (scale_sync)
      );
 
   cdc_synchronizer
@@ -203,8 +200,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (palette0),
-     .data_out (palette0_sync),
-     .reset (reset)
+     .data_out (palette0_sync)
      );
 
   cdc_synchronizer
@@ -215,8 +211,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (palette1),
-     .data_out (palette1_sync),
-     .reset (reset)
+     .data_out (palette1_sync)
      );
 
   cdc_synchronizer
@@ -227,8 +222,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (palette2),
-     .data_out (palette2_sync),
-     .reset (reset)
+     .data_out (palette2_sync)
      );
 
   cdc_synchronizer
@@ -239,8 +233,7 @@ module chr_bg
     (
      .clk (ext_clkv),
      .data_in (palette3),
-     .data_out (palette3_sync),
-     .reset (reset)
+     .data_out (palette3_sync)
      );
 
   shift_register_vector

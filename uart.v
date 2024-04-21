@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2017 miya
+  Copyright (c) 2017, miya
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -19,6 +19,8 @@
  Tx: Wait for 'busy' == 0, set 'data_tx' and set 1 to the 'start' signal.
 
  Rx: Read 'data_rx' at the rising edge of the 're' signal
+ 
+ ver. 2024/04/21
  */
 
 module uart
@@ -41,6 +43,8 @@ module uart
 
   localparam TRUE = 1'b1;
   localparam FALSE = 1'b0;
+  localparam ONE = 1'd1;
+  localparam ZERO = 1'd0;
   localparam SHIFT_REG_DEPTH = 3;
   localparam WAIT = (CLK_HZ / SCLK_HZ - 1);
   localparam WAIT_HALF = ((CLK_HZ / SCLK_HZ) / 2 - 1);
@@ -76,9 +80,9 @@ module uart
 
   always @(posedge clk)
     begin
-      if ((busy == TRUE) && (tx_counter != 0))
+      if ((busy == TRUE) && (tx_counter != ZERO))
         begin
-          tx_counter <= tx_counter - 1;
+          tx_counter <= tx_counter - ONE;
         end
       else
         begin
@@ -92,48 +96,48 @@ module uart
         begin
           txd_counter <= (WIDTH + 1);
           busy <= FALSE;
-          tx_state <= 0;
+          tx_state <= ZERO;
         end
       else
         begin
           case (tx_state)
-            0:
+            ZERO:
               begin
                 if ((start == TRUE) && (busy == FALSE))
                   begin
-                    txd_counter <= 0;
+                    txd_counter <= ZERO;
                     busy <= TRUE;
-                    tx_state <= 1;
+                    tx_state <= ONE;
                   end
                 else
                   begin
                     txd_counter <= (WIDTH + 1);
                     busy <= FALSE;
-                    tx_state <= 0;
+                    tx_state <= ZERO;
                   end
               end
-            1:
+            ONE:
               begin
-                if (tx_counter == 0)
+                if (tx_counter == ZERO)
                   begin
                     if (txd_counter == (WIDTH + 1))
                       begin
                         txd_counter <= (WIDTH + 1);
                         busy <= FALSE;
-                        tx_state <= 0;
+                        tx_state <= ZERO;
                       end
                     else
                       begin
-                        txd_counter <= txd_counter + 1;
+                        txd_counter <= txd_counter + ONE;
                         busy <= TRUE;
-                        tx_state <= 1;
+                        tx_state <= ONE;
                       end
                   end
                 else
                   begin
                     txd_counter <= txd_counter;
                     busy <= TRUE;
-                    tx_state <= 1;
+                    tx_state <= ONE;
                   end
               end
           endcase
@@ -145,7 +149,7 @@ module uart
     begin
       if (reset == TRUE)
         begin
-          rxd_shift_reg <= 0;
+          rxd_shift_reg <= ZERO;
         end
       else
         begin
@@ -160,17 +164,17 @@ module uart
     begin
       if (reset == TRUE)
         begin
-          rx_counter <= 0;
+          rx_counter <= ZERO;
         end
       else
         begin
-          if ((rx_state != 0) && (rx_counter != 0))
+          if ((rx_state != ZERO) && (rx_counter != ZERO))
             begin
-              rx_counter <= rx_counter - 1;
+              rx_counter <= rx_counter - ONE;
             end
           else
             begin
-              if (rx_state == 0)
+              if (rx_state == ZERO)
                 begin
                   rx_counter <= WAIT_HALF;
                 end
@@ -184,15 +188,15 @@ module uart
 
   always @(posedge clk)
     begin
-      if (rx_state == 0)
+      if (rx_state == ZERO)
         begin
-          rxd_counter <= 0;
+          rxd_counter <= ZERO;
         end
       else
         begin
-          if ((rx_counter == 0) && (rxd_counter != (WIDTH + 1)))
+          if ((rx_counter == ZERO) && (rxd_counter != (WIDTH + 1)))
             begin
-              rxd_counter <= rxd_counter + 1;
+              rxd_counter <= rxd_counter + ONE;
             end
           else
             begin
@@ -206,46 +210,46 @@ module uart
     begin
       if (reset == TRUE)
         begin
-          rx_state <= 0;
-          data_rx_buf <= 0;
+          rx_state <= ZERO;
+          data_rx_buf <= ZERO;
           re <= FALSE;
         end
       else
         begin
           case (rx_state)
-            0:
+            ZERO:
               begin
                 if (rxd_sync == START_BIT)
                   begin
                     re <= FALSE;
-                    rx_state <= 1;
+                    rx_state <= ONE;
                   end
                 else
                   begin
                     re <= re;
-                    rx_state <= 0;
+                    rx_state <= ZERO;
                   end
               end
-            1:
+            ONE:
               begin
-                if (rx_counter == 0)
+                if (rx_counter == ZERO)
                   begin
                     if (rxd_counter == (WIDTH + 1))
                       begin
                         re <= TRUE;
-                        rx_state <= 0;
+                        rx_state <= ZERO;
                       end
                     else
                       begin
                         data_rx_buf[rxd_counter] <= rxd_sync;
                         re <= FALSE;
-                        rx_state <= 1;
+                        rx_state <= ONE;
                       end
                   end
                 else
                   begin
                     re <= FALSE;
-                    rx_state <= 1;
+                    rx_state <= ONE;
                   end
               end
           endcase

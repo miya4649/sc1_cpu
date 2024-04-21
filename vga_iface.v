@@ -13,6 +13,8 @@
   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// ver. 2024/03/31
+
 module vga_iface
   #(
     parameter VGA_MAX_H = 1650-1,
@@ -23,7 +25,12 @@ module vga_iface
     parameter VGA_SYNC_V_START = 725,
     parameter VGA_SYNC_H_END = 1430,
     parameter VGA_SYNC_V_END = 730,
-    parameter PIXEL_DELAY = 9,
+    parameter CLIP_ENABLE = 0,
+    parameter CLIP_H_S = 0,
+    parameter CLIP_H_E = 1280,
+    parameter CLIP_V_S = 0,
+    parameter CLIP_V_E = 720,
+    parameter PIXEL_DELAY = 2,
     parameter BPP = 8
     )
   (
@@ -53,6 +60,7 @@ module vga_iface
   wire             vga_hs_delay;
   wire             vga_vs_delay;
   wire             pixel_valid_delay;
+  wire             pixel_en;
 
   // H counter
   always @(posedge ext_clkv)
@@ -104,8 +112,34 @@ module vga_iface
   // Pixel valid
   assign pixel_valid = ((count_h < VGA_WIDTH) && (count_v < VGA_HEIGHT)) ? 1'b1 : 1'b0;
 
+  // clip
+  generate
+    if (CLIP_ENABLE == 1)
+      begin: clip_block
+        wire clip;
+        wire clip_delay;
+        assign clip = ((count_v >= CLIP_V_S) && (count_v < CLIP_V_E) && (count_h >= CLIP_H_S) && (count_h < CLIP_H_E)) ? 1'b1 : 1'b0;
+        assign pixel_en = pixel_valid_delay & clip_delay;
+
+        shift_register
+          #(
+            .DELAY (PIXEL_DELAY)
+            )
+        shift_register_pixel_valid
+          (
+           .clk (ext_clkv),
+           .din (clip),
+           .dout (clip_delay)
+           );
+      end
+    else
+      begin: clip_block
+        assign pixel_en = pixel_valid_delay;
+      end
+  endgenerate
+
   // ext out
-  assign ext_vga_color_out = pixel_valid_delay ? ext_color_in : {BPP{1'b0}};
+  assign ext_vga_color_out = pixel_en ? ext_color_in : {BPP{1'b0}};
   assign ext_vga_hs = vga_hs_delay;
   assign ext_vga_vs = vga_vs_delay;
   assign ext_vga_de = pixel_valid_delay;
@@ -120,8 +154,7 @@ module vga_iface
     (
      .data_in (count_v),
      .data_out (vcount),
-     .clk (clk),
-     .reset (reset)
+     .clk (clk)
      );
 
   shift_register
