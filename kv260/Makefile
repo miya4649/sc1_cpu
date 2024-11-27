@@ -11,7 +11,7 @@ run: tool
 	make -C ../tools run
 
 asm:
-	make -C ../asm WIDEVGA=y VGA720P=y AUDIO44K=y
+	make -C ../asm WIDEVGA=y VGA720P=y
 
 tool:
 	make -C ../tools

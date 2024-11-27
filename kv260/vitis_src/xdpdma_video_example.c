@@ -28,7 +28,7 @@
 *
 ******************************************************************************/
 
-/* 12/14/23 Modified by miya */
+/* 11/26/24 Modified by miya */
 
 /***************************** Include Files *********************************/
 
@@ -38,6 +38,8 @@
 #include "xdpdma_video_example.h"
 
 /************************** Constant Definitions *****************************/
+#define SAMPLE_FREQ		48000
+
 #ifndef SDT
 #define DPPSU_DEVICE_ID		XPAR_PSU_DP_DEVICE_ID
 #define AVBUF_DEVICE_ID		XPAR_PSU_DP_DEVICE_ID
@@ -117,20 +119,11 @@ int main()
 int DpdmaVideoExample(Run_Config *RunCfgPtr)
 
 {
-	u32 Status;
 	/* Initialize the application configuration */
 	InitRunConfig(RunCfgPtr);
-
-	Status = InitDpDmaSubsystem(RunCfgPtr);
-	if (Status != XST_SUCCESS) {
-				return XST_FAILURE;
-	}
-
+	sleep(1);
+	DpPsu_Run(RunCfgPtr);
 	SetupInterrupts(RunCfgPtr);
-
-	// Initialize again
-	InitDpDmaSubsystem(RunCfgPtr);
-
 	return XST_SUCCESS;
 }
 
@@ -234,7 +227,11 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 	int IF_version = 0x11;
 	int IF_audio_channel_count = 1; // 0:refer to stream header 1:2ch 2:3ch 3:4ch 4:5ch 5:6ch 6:7ch 7:8ch
 	int IF_audio_coding_type = 1; // 0:refer to stream header 1:L-PCM
-	int IF_sampling_frequency = 2; // 0: refer to stream header 1:32kHz 2:44.1kHz 3:48kHz 4:88.2kHz 5:96kHz 6:176.4kHz 7:192kHz
+	int IF_sampling_frequency = 3; // 0: refer to stream header 1:32kHz 2:44.1kHz 3:48kHz 4:88.2kHz 5:96kHz 6:176.4kHz 7:192kHz
+    if (SAMPLE_FREQ == 44100)
+    {
+      IF_sampling_frequency = 2;
+    }
 	int IF_sample_size = 1; // 0:refer to stream header 1:16bit 2:20bit 3:24bit
 	int IF_channel_allocation = 0; // 0:1ch-L 2ch-R
 	db1 = 0x00;
@@ -276,10 +273,11 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 	XDpPsu_CfgMsaEnSynchClkMode(DpPsuPtr, RunCfgPtr->EnSynchClkMode);
 	/* Set the clock source depending on the use case.
 	 * Here for simplicity we are using PS clock as the source*/
-	XAVBuf_SetAudioVideoClkSrc(AVBufPtr, XAVBUF_PS_CLK, XAVBUF_PL_CLK);
+	XAVBuf_SetAudioVideoClkSrc(AVBufPtr, XAVBUF_PS_CLK, XAVBUF_PS_CLK);
 	/* Issue a soft reset after selecting the input clock sources */
 	XAVBuf_SoftReset(AVBufPtr);
 	XAVBuf_AudioSoftReset(AVBufPtr);
+	XAVBuf_SetAudioClock(SAMPLE_FREQ * 512);
 
 	return XST_SUCCESS;
 }

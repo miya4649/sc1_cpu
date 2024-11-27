@@ -36,7 +36,7 @@ $ make
 
 Vitis Unified IDEを起動し、
 
-File: Open Workspaceで
+File: Set Workspaceで
 
 (このディレクトリ)/vitis_workspace を選択してOK
 
