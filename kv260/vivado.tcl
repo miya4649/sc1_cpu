@@ -55,8 +55,6 @@ CONFIG.PSU__USE__IRQ0 {0} \
 CONFIG.PSU__FPGA_PL1_ENABLE {0} \
 CONFIG.PSU__USE__AUDIO {1} \
 CONFIG.PSU__USE__VIDEO {1} \
-CONFIG.PSU__CRF_APB__DP_AUDIO_REF_CTRL__FREQMHZ {24.576} \
-CONFIG.PSU__CRF_APB__DP_AUDIO_REF_CTRL__SRCSEL {VPLL} \
 ] [get_bd_cells $ps_name] 
 
 create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_0
@@ -66,13 +64,22 @@ CONFIG.PRIM_SOURCE {Global_buffer} \
 CONFIG.RESET_TYPE {ACTIVE_LOW} \
 ] [get_bd_cells clk_wiz_0]
 
+create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_1
+
+set_property -dict [list \
+CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {24.576} \
+CONFIG.PRIM_SOURCE {Global_buffer} \
+CONFIG.RESET_TYPE {ACTIVE_LOW} \
+CONFIG.USE_LOCKED {false} \
+] [get_bd_cells clk_wiz_1]
+
 create_bd_cell -type module -reference $rtl_top_name $rtl_top_instance
 
 
 # port connection
-connect_bd_net [get_bd_pins ${ps_name}/pl_clk0] [get_bd_pins clk_wiz_0/clk_in1]
+connect_bd_net [get_bd_pins ${ps_name}/pl_clk0] [get_bd_pins clk_wiz_0/clk_in1] [get_bd_pins clk_wiz_1/clk_in1]
 
-connect_bd_net [get_bd_pins ${ps_name}/pl_resetn0] [get_bd_pins clk_wiz_0/resetn]
+connect_bd_net [get_bd_pins ${ps_name}/pl_resetn0] [get_bd_pins clk_wiz_0/resetn] [get_bd_pins clk_wiz_1/resetn]
 
 connect_bd_net [get_bd_pins ${rtl_top_instance}/clk] [get_bd_pins clk_wiz_0/clk_out1]
 
@@ -96,7 +103,7 @@ connect_bd_net [get_bd_pins ${rtl_top_instance}/video_vsyncn] [get_bd_pins ${ps_
 
 connect_bd_net [get_bd_pins ${rtl_top_instance}/audio_ready] [get_bd_pins ${ps_name}/dp_s_axis_audio_tready]
 
-connect_bd_net [get_bd_pins ${ps_name}/dp_audio_ref_clk] [get_bd_pins ${rtl_top_instance}/clka] [get_bd_pins ${ps_name}/dp_s_axis_audio_clk]
+connect_bd_net [get_bd_pins clk_wiz_1/clk_out1] [get_bd_pins ${rtl_top_instance}/clka] [get_bd_pins ${ps_name}/dp_s_axis_audio_clk]
 
 make_bd_pins_external [get_bd_pins ${rtl_top_instance}/led]
 

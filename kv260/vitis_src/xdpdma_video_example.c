@@ -273,11 +273,10 @@ int InitDpDmaSubsystem(Run_Config *RunCfgPtr)
 	XDpPsu_CfgMsaEnSynchClkMode(DpPsuPtr, RunCfgPtr->EnSynchClkMode);
 	/* Set the clock source depending on the use case.
 	 * Here for simplicity we are using PS clock as the source*/
-	XAVBuf_SetAudioVideoClkSrc(AVBufPtr, XAVBUF_PS_CLK, XAVBUF_PS_CLK);
+	XAVBuf_SetAudioVideoClkSrc(AVBufPtr, XAVBUF_PS_CLK, XAVBUF_PL_CLK);
 	/* Issue a soft reset after selecting the input clock sources */
 	XAVBuf_SoftReset(AVBufPtr);
 	XAVBuf_AudioSoftReset(AVBufPtr);
-	XAVBuf_SetAudioClock(SAMPLE_FREQ * 512);
 
 	return XST_SUCCESS;
 }
